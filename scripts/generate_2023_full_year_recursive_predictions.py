@@ -621,6 +621,12 @@ def main():
     comparison_zip.replace(final_comparison_zip)
     comparison_zip = final_comparison_zip
     print(f"Paired comparison archive: {comparison_zip}")
+    print(
+        "Overlapping regional mass — predicted/observed/ratio: "
+        f"{annual_predicted:,.1f} / {annual_observed:,.0f} / {annual_ratio:.2%}"
+    )
+    if reproduction_check["full_year_verified_against_frozen_evaluation"]:
+        print("Frozen 2023 reproduction check: PASSED (within 0.5%)")
 
     if monthly_frames:
         print("\nAggregating seasonal and annual summaries...")
