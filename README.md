@@ -82,6 +82,8 @@ On a cold start, the FastAPI lifespan downloads the ZIP to Vercel's writable `/t
 
 `vercel.json` explicitly includes `frontend/**` in the FastAPI function and allows up to 300 seconds for cold-start download/model initialization. Native ML imports are deferred until startup, so `/api/health` can report an actionable error instead of the entire function returning an opaque invocation failure.
 
+Vercel installs the official `xgboost-cpu` wheel rather than the much larger GPU-capable wheel. The application performs inference on CPU, and both packages expose the same Python `xgboost` module and JSON model loader.
+
 If Vercel reports that the Python function is too large because of NumPy, SciPy, Polars, and XGBoost, add this project environment variable and redeploy:
 
 ```text
