@@ -23,6 +23,7 @@ import json
 import math
 import os
 import sys
+import zipfile
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -71,6 +72,24 @@ def mount_colab_drive() -> None:
 
 def read_json(path: Path) -> dict[str, Any]:
     return json.loads(path.read_text(encoding="utf-8"))
+
+
+def locate_model_directory(root: Path) -> Path:
+    root = Path(root)
+    candidates = [root]
+    if root.exists():
+        candidates.extend(path.parent for path in root.rglob("run_configuration.json"))
+    valid = [
+        candidate
+        for candidate in candidates
+        if all((candidate / name).is_file() for name in REQUIRED_MODEL_FILES)
+    ]
+    if not valid:
+        raise FileNotFoundError(
+            f"No complete deployment model was found under {root}. "
+            f"Required files include {REQUIRED_MODEL_FILES[:4]}."
+        )
+    return max(valid, key=lambda path: (path / "training_complete.json").stat().st_mtime)
 
 
 class IsotonicCalibrator:
@@ -165,6 +184,8 @@ def run_monthly_recursive_predictions(
 ) -> pl.DataFrame:
     """Run recursive predictions on a single monthly panel file."""
     frame = pl.read_parquet(panel_path)
+    if "lightning_count" not in frame.columns:
+        raise RuntimeError(f"{panel_path.name} is missing the untouched lightning_count target")
     valid_times = frame.select("forecast_valid_time_ist").unique().sort("forecast_valid_time_ist").to_series().to_list()
     
     feature_pos = {name: idx for idx, name in enumerate(features)}
@@ -220,6 +241,8 @@ def run_monthly_recursive_predictions(
             sev_heavy = np.clip(np.expm1(models["severity_heavy"].predict(dmat)), 0.0, None)
             
             expected_count = probs[:, 1] * sev_mild + probs[:, 2] * sev_strong + probs[:, 3] * sev_heavy
+            observed_local = h_slice["lightning_count"].to_numpy().astype(np.float32)
+            observed_region50 = sparse_sum(neighbor50, observed_local)
             
             # Alarms
             warning_code = np.zeros(len(expected_count), dtype=np.uint8)
@@ -241,6 +264,7 @@ def run_monthly_recursive_predictions(
                     "p_strong_or_heavy_50km": round(float(ord_q95[r]), 5),
                     "p_heavy_50km": round(float(ord_q99[r]), 5),
                     "expected_region50_count": round(float(expected_count[r]), 3),
+                    "observed_region50_count": int(round(float(observed_region50[r]))),
                     "warning_code": int(warning_code[r]),
                 })
                 
@@ -250,6 +274,87 @@ def run_monthly_recursive_predictions(
                 lags = [local_proxy, lags[0], lags[1], lags[2]]
 
     return pl.DataFrame(output_rows)
+
+
+def append_month_to_comparison_archive(
+    archive: zipfile.ZipFile,
+    predictions: pl.DataFrame,
+    dates: list[str],
+    stats: dict[str, dict[str, float]],
+) -> None:
+    daily = (
+        predictions.with_columns(
+            pl.col("valid_time_ist").cast(pl.Datetime).dt.date().cast(pl.String).alias("date")
+        )
+        .group_by(["date", "grid_id", "grid_lat", "grid_lon"])
+        .agg(
+            pl.col("expected_region50_count").sum().alias("predicted"),
+            pl.col("observed_region50_count").sum().alias("observed"),
+            pl.col("p_heavy").max().alias("p_heavy"),
+            pl.col("warning_code").max().alias("warning_code"),
+        )
+        .sort(["date", "grid_id"])
+    )
+
+    for date_value in daily["date"].unique(maintain_order=True).to_list():
+        day = daily.filter(pl.col("date") == date_value).sort("grid_id")
+        predicted = day["predicted"].to_numpy().astype(np.float64)
+        observed = day["observed"].to_numpy().astype(np.float64)
+        cell_count = len(predicted)
+        top_count = max(1, int(math.ceil(cell_count * 0.10)))
+        predicted_top = set(np.argpartition(predicted, -top_count)[-top_count:].tolist())
+        observed_top = set(np.argpartition(observed, -top_count)[-top_count:].tolist())
+        top_overlap = len(predicted_top & observed_top) / top_count
+
+        predicted_rank = pl.Series(predicted).rank("average").to_numpy()
+        observed_rank = pl.Series(observed).rank("average").to_numpy()
+        if np.std(predicted_rank) > 0 and np.std(observed_rank) > 0:
+            spatial_spearman = float(np.corrcoef(predicted_rank, observed_rank)[0, 1])
+        else:
+            spatial_spearman = 0.0
+
+        cells = [
+            [
+                int(grid_id),
+                round(float(lat), 3),
+                round(float(lon), 3),
+                round(float(pred), 2),
+                int(round(float(obs))),
+                round(float(p_heavy), 4),
+                int(warning),
+            ]
+            for grid_id, lat, lon, pred, obs, p_heavy, warning in zip(
+                day["grid_id"],
+                day["grid_lat"],
+                day["grid_lon"],
+                predicted,
+                observed,
+                day["p_heavy"],
+                day["warning_code"],
+            )
+        ]
+        payload = {
+            "date": date_value,
+            "target": "daily sum of 50 km regional lightning counts",
+            "predicted_total": round(float(predicted.sum()), 2),
+            "observed_total": int(round(float(observed.sum()))),
+            "spatial_spearman": round(spatial_spearman, 4),
+            "top10_exact_overlap": round(top_overlap, 4),
+            "predicted_max": round(float(predicted.max()), 2),
+            "observed_max": int(round(float(observed.max()))),
+            "cells": cells,
+        }
+        archive.writestr(
+            f"daily/{date_value}.json",
+            json.dumps(payload, separators=(",", ":")),
+        )
+        dates.append(date_value)
+        stats[date_value] = {
+            "predicted_total": payload["predicted_total"],
+            "observed_total": payload["observed_total"],
+            "spatial_spearman": payload["spatial_spearman"],
+            "top10_exact_overlap": payload["top10_exact_overlap"],
+        }
 
 
 def main():
@@ -284,21 +389,27 @@ def main():
         default=True,
         help="Enable multi-horizon recursive lag updates."
     )
+    parser.add_argument(
+        "--comparison-zip",
+        type=Path,
+        default=None,
+        help=(
+            "Paired daily model-vs-observed archive for the web player. "
+            "Defaults to OUTPUT_DIR/india_lightning_2023_comparison_archive.zip."
+        ),
+    )
     args = parser.parse_args()
 
     mount_colab_drive()
     args.output_dir.mkdir(parents=True, exist_ok=True)
+    comparison_zip = args.comparison_zip or (
+        args.output_dir / "india_lightning_2023_comparison_archive.zip"
+    )
+    comparison_zip.parent.mkdir(parents=True, exist_ok=True)
 
     # Locate model files
-    model_dir = args.model_dir
-    if not model_dir.exists():
-        candidates = list(Path.cwd().glob("**/models")) + list(Path("/content/drive/MyDrive").glob("**/india_lightning_0p25_spatial_models*"))
-        if candidates:
-            model_dir = candidates[0]
-            print(f"Using discovered model directory: {model_dir}")
-        else:
-            print(f"Error: Model directory not found at {args.model_dir}")
-            sys.exit(1)
+    model_dir = locate_model_directory(args.model_dir)
+    print(f"Using model directory: {model_dir}")
 
     print("Loading models and calibrators...")
     config = read_json(model_dir / "run_configuration.json")
@@ -320,31 +431,64 @@ def main():
     print(f"Processing 2023 months: {months} (Recursive mode = {args.recursive})")
 
     monthly_frames = []
-    for month in months:
-        panel_file = args.panel_dir / "parts" / f"india_lightning_physics_0p25_forecast_2023_{month:02d}.parquet"
-        if not panel_file.exists():
-            # Try alternate naming
-            alt = list((args.panel_dir / "parts").glob(f"*2023_{month:02d}*.parquet"))
-            if alt:
-                panel_file = alt[0]
-            else:
-                print(f"Warning: Panel partition for 2023-{month:02d} not found at {panel_file}, skipping.")
-                continue
+    comparison_dates: list[str] = []
+    comparison_stats: dict[str, dict[str, float]] = {}
+    with zipfile.ZipFile(
+        comparison_zip, "w", compression=zipfile.ZIP_DEFLATED, compresslevel=9
+    ) as comparison_archive:
+        for month in months:
+            panel_file = args.panel_dir / "parts" / f"india_lightning_physics_0p25_forecast_2023_{month:02d}.parquet"
+            if not panel_file.exists():
+                # Try alternate naming
+                alt = list((args.panel_dir / "parts").glob(f"*2023_{month:02d}*.parquet"))
+                if alt:
+                    panel_file = alt[0]
+                else:
+                    print(f"Warning: Panel partition for 2023-{month:02d} not found at {panel_file}, skipping.")
+                    continue
 
-        print(f"\n--- Generating recursive predictions for 2023-{month:02d} ({SEASON_MAP[month]}) ---")
-        start_time = datetime.now()
-        pred_df = run_monthly_recursive_predictions(
-            panel_file, models, calibrators, features, alarm_thresholds, recursive=args.recursive
+            print(f"\n--- Generating recursive predictions for 2023-{month:02d} ({SEASON_MAP[month]}) ---")
+            start_time = datetime.now()
+            pred_df = run_monthly_recursive_predictions(
+                panel_file, models, calibrators, features, alarm_thresholds, recursive=args.recursive
+            )
+            elapsed = (datetime.now() - start_time).total_seconds()
+            print(f"Completed 2023-{month:02d} in {elapsed:.1f}s ({pred_df.height:,} prediction rows)")
+
+            # Save monthly predictions and append paired daily maps.
+            out_file = args.output_dir / f"recursive_predictions_2023_{month:02d}.parquet"
+            pred_df.write_parquet(out_file, compression="zstd")
+            append_month_to_comparison_archive(
+                comparison_archive, pred_df, comparison_dates, comparison_stats
+            )
+            print(f"Saved: {out_file}")
+
+            monthly_frames.append(
+                pred_df.group_by(["grid_id", "grid_lat", "grid_lon"]).agg(
+                    pl.col("p_heavy").sum().alias("p_heavy_sum"),
+                    pl.col("p_strong_or_heavy_50km").sum().alias("p_severe_sum"),
+                    pl.len().alias("window_count"),
+                    (pl.col("warning_code") >= 2).sum().alias("warning_windows"),
+                    pl.col("expected_region50_count").sum().alias("expected_sum"),
+                )
+            )
+            del pred_df
+
+        manifest = {
+            "schema_version": 1,
+            "year": 2023,
+            "resolution_degrees": 0.25,
+            "target": "daily sum of 50 km regional lightning counts",
+            "selection": "model and thresholds selected on 2022; 2023 untouched holdout",
+            "recursive_horizons_hours": [6, 12, 18, 24],
+            "dates": sorted(comparison_dates),
+            "stats": comparison_stats,
+        }
+        comparison_archive.writestr(
+            "manifest.json", json.dumps(manifest, separators=(",", ":"))
         )
-        elapsed = (datetime.now() - start_time).total_seconds()
-        print(f"Completed 2023-{month:02d} in {elapsed:.1f}s ({pred_df.height:,} prediction rows)")
 
-        # Save monthly predictions
-        out_file = args.output_dir / f"recursive_predictions_2023_{month:02d}.parquet"
-        pred_df.write_parquet(out_file, compression="zstd")
-        print(f"Saved: {out_file}")
-
-        monthly_frames.append(pred_df)
+    print(f"Paired comparison archive: {comparison_zip}")
 
     if monthly_frames:
         print("\nAggregating seasonal and annual summaries...")
@@ -354,11 +498,17 @@ def main():
         summary = (
             all_preds.group_by(["grid_id", "grid_lat", "grid_lon"])
             .agg(
-                pl.col("p_heavy").mean().alias("mean_p_heavy"),
-                pl.col("p_strong_or_heavy_50km").mean().alias("mean_p_severe_50km"),
-                (pl.col("warning_code") >= 2).sum().alias("strong_or_heavy_warning_windows"),
-                pl.col("expected_region50_count").sum().alias("predicted_annual_expected_strikes")
+                pl.col("p_heavy_sum").sum().alias("p_heavy_sum"),
+                pl.col("p_severe_sum").sum().alias("p_severe_sum"),
+                pl.col("window_count").sum().alias("window_count"),
+                pl.col("warning_windows").sum().alias("strong_or_heavy_warning_windows"),
+                pl.col("expected_sum").sum().alias("predicted_annual_expected_strikes")
             )
+            .with_columns(
+                (pl.col("p_heavy_sum") / pl.col("window_count")).alias("mean_p_heavy"),
+                (pl.col("p_severe_sum") / pl.col("window_count")).alias("mean_p_severe_50km"),
+            )
+            .drop(["p_heavy_sum", "p_severe_sum", "window_count"])
             .sort("predicted_annual_expected_strikes", descending=True)
         )
         summary_csv = args.output_dir / "predictions_2023_grid_annual_summary.csv"

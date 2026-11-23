@@ -13,7 +13,7 @@
     <div>
       <p class="eyebrow">Operational Research Demo</p>
       <h1>India Lightning Outlook</h1>
-      <p class="subtitle">Today’s lightning-history candidate plus a separate 2023 observed archive</p>
+      <p class="subtitle">Untouched 2023 model-vs-reality player plus today’s four-horizon recursive outlook</p>
     </div>
     <div class="status-wrap">
       <span id="status-dot" class="status-dot"></span>
@@ -75,13 +75,13 @@
       </div>
     </section>
 
-    <!-- 2023 Annual Replay & All-India Monsoon Explorer -->
-    <section class="archive-bar" id="archive-bar" aria-label="2023 Historical Daily Explorer">
+    <!-- 2023 untouched holdout comparison player -->
+    <section class="archive-bar" id="archive-bar" aria-label="2023 Model Versus Observed Comparison Player">
       <div class="archive-top">
         <div class="archive-badge-wrap">
-          <span class="badge badge-pulse">2023 Archive</span>
-          <strong>Observed Reality — All-India Daily Lightning</strong>
-          <span class="archive-hint">Historical observations are kept separate from today’s recursive candidate</span>
+          <span class="badge badge-pulse">2023 Holdout</span>
+          <strong>Model Forecast vs Observed Reality</strong>
+          <span class="archive-hint">The model was frozen on 2022; use the player to inspect its untouched 2023 spatial performance</span>
         </div>
         <div class="archive-presets">
           <span class="presets-label">⚡ Key Days:</span>
@@ -94,16 +94,35 @@
       <div class="archive-controls">
         <div class="archive-date-input-wrap">
           <label for="archive-date-picker">Date:</label>
-          <input type="date" id="archive-date-picker" min="2023-01-03" max="2023-12-31" value="2023-07-21">
+          <input type="date" id="archive-date-picker" min="2023-01-01" max="2023-12-31" value="2023-07-21">
         </div>
         <div class="archive-slider-wrap">
           <input type="range" id="archive-slider" min="0" max="344" value="180">
           <span id="slider-date-display" class="slider-date-display">2023-07-21</span>
         </div>
         <div class="archive-actions">
-          <button type="button" id="archive-play-btn" class="btn-archive-secondary">▶ Play Year</button>
-          <button type="button" id="archive-load-btn" class="btn-archive-primary">Load Day</button>
+          <button type="button" id="archive-play-btn" class="btn-archive-secondary">▶ Play 2023</button>
+          <button type="button" id="archive-load-btn" class="btn-archive-primary">Compare Day</button>
         </div>
+      </div>
+      <div id="comparison-status" class="comparison-status">Loading paired 2023 archive…</div>
+      <div class="comparison-metrics" aria-label="Daily comparison metrics">
+        <span>Spatial Spearman <strong id="comparison-spearman">—</strong></span>
+        <span>Top-10% overlap <strong id="comparison-overlap">—</strong></span>
+        <span>Predicted regional total <strong id="comparison-predicted-total">—</strong></span>
+        <span>Observed regional total <strong id="comparison-observed-total">—</strong></span>
+      </div>
+      <div class="comparison-maps">
+        <article class="comparison-map-card">
+          <h3>Model forecast</h3>
+          <p>Daily sum of recursive 50 km regional expected counts</p>
+          <canvas id="comparison-predicted-map" width="620" height="620" aria-label="Model-predicted 2023 lightning map"></canvas>
+        </article>
+        <article class="comparison-map-card">
+          <h3>Observed reality</h3>
+          <p>Daily sum of observed 50 km regional lightning counts</p>
+          <canvas id="comparison-observed-map" width="620" height="620" aria-label="Observed 2023 lightning map"></canvas>
+        </article>
       </div>
     </section>
 
@@ -263,7 +282,7 @@
       </article>
       <article>
         <h2>Input Contract</h2>
-        <p>Today’s candidate consumes one complete 24-hour gridded lightning-history seed. Weather predictors are masked; the separate 2023 archive displays observations only.</p>
+        <p>Today’s candidate consumes one complete 24-hour gridded lightning-history seed. The comparison player pairs frozen-model predictions with untouched 2023 observations.</p>
       </article>
       <article>
         <h2>Recursive Model Dynamics</h2>

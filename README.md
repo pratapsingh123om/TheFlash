@@ -157,6 +157,8 @@ python -m backend.bootstrap_assets \
 - `POST /api/forecast/run?mode=lightning_only_today` — current-time autoregressive lightning-history candidate
 - `POST /api/forecast/run?mode=full_features_replay` — frozen retrospective feature replay
 - `GET /api/forecast/latest` — return the latest map payload
+- `GET /api/comparison/dates` — list paired untouched 2023 holdout dates
+- `GET /api/comparison/day?date=2023-07-21` — paired model and observed spatial maps
 - `GET /api/boundary` — return the India boundary used by the dashboard
 
 Only one forecast can execute at a time. A simultaneous run request receives HTTP `409`, preventing two processes from racing the output file.
@@ -179,6 +181,37 @@ The tests use temporary synthetic XGBoost artifacts and a temporary ZIP. They ne
 `frontend/app.js` deliberately uses relative endpoints such as `/api/health` and `/api/forecast/latest`. Therefore the dashboard always calls the FastAPI process that served it, whether opened through Cloud Shell Web Preview or at `http://127.0.0.1:8080`. No bucket URL, token, model path, or secret is sent to the browser.
 
 The output contains four periods with per-cell latitude, longitude, category probabilities, warning code, and expected count. The dashboard draws those cells over the included India boundary and provides horizon selection and summary cards.
+
+## Building the full 2023 comparison player
+
+The small repository archive contains observed daily lightning only. A valid paired player must be generated from the frozen model and untouched 2023 panel; the browser must not invent model predictions from the observations.
+
+Run the full-year generator in Colab after mounting Drive:
+
+```bash
+python scripts/generate_2023_full_year_recursive_predictions.py \
+  --panel-dir /content/drive/MyDrive/MINOR_PROJECT/0.25_spatial_models/india_lightning_era5_physics_0p25_forecast_panel \
+  --model-dir /content/drive/MyDrive/MINOR_PROJECT/0.25_spatial_models/india_lightning_0p25_spatial_models \
+  --output-dir /content/drive/MyDrive/MINOR_PROJECT/0.25_spatial_models/2023_full_year_recursive_results
+```
+
+This produces:
+
+```text
+india_lightning_2023_comparison_archive.zip
+```
+
+Each daily payload pairs the model's daily sum of recursive 50 km regional expected counts with the observed daily sum of 50 km regional lightning counts on the same 5,070-cell grid. The archive also stores daily spatial Spearman correlation and exact top-10% hotspot overlap.
+
+Upload it without changing its filename:
+
+```bash
+gcloud storage cp \
+  india_lightning_2023_comparison_archive.zip \
+  gs://nuclei-lenses/flash-model/india_lightning_2023_comparison_archive.zip
+```
+
+The deployed dashboard then enables the side-by-side date slider and 2023 animation automatically. Model selection remains frozen on 2022; the archive generation performs inference and reporting only.
 
 ## Supplying current lightning history
 

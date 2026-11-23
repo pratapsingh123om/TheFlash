@@ -593,167 +593,156 @@ runButton.addEventListener("click", async () => {
   }
 });
 
-let archiveDates = [];
-let isArchivePlaying = false;
-let archivePlayTimer = null;
+let comparisonDates = [];
+let isComparisonPlaying = false;
+let comparisonPlayTimer = null;
 
-function formatArchiveDayAsForecast(archiveData) {
-  const cells = archiveData.cells.map(c => ({
-    grid_id: c.id,
-    lat: c.lat,
-    lon: c.lon,
-    warning_code: c.w,
-    p_none: c.w === 0 ? 0.98 : 0.05,
-    p_mild: c.w === 1 ? 0.75 : 0.10,
-    p_strong: c.w === 2 ? 0.65 : 0.15,
-    p_heavy: c.w === 3 ? 0.55 : 0.05,
-    p_strong_or_heavy_within50: c.w >= 2 ? 0.85 : 0.20,
-    p_heavy_within50: c.w === 3 ? 0.75 : 0.10,
-    expected_region50_count: c.s,
-  }));
-  const heavyCount = archiveData.cells.filter(c => c.w === 3).length;
-  const strongCount = archiveData.cells.filter(c => c.w === 2).length;
-  const mildCount = archiveData.cells.filter(c => c.w === 1).length;
-
-  return {
-    status: "complete",
-    archive_mode: true,
-    forecast_kind: "observed_2023_archive",
-    candidate: false,
-    date: archiveData.date,
-    periods: [
-      {
-        horizon_hours: 24,
-        valid_time_ist: `${archiveData.date} · 24h All-India Archive (${archiveData.total.toLocaleString()} strokes)`,
-        warning_counts: {
-          none: Math.max(0, 5070 - (heavyCount + strongCount + mildCount)),
-          mild: mildCount,
-          strong: strongCount,
-          heavy: heavyCount,
-        },
-        max_heavy_probability: heavyCount > 0 ? 0.75 : 0.10,
-        cells: cells,
+function drawBoundaryOn(targetContext, width, height) {
+  if (!state.boundary) return;
+  targetContext.save();
+  targetContext.strokeStyle = "rgba(215, 232, 250, 0.72)";
+  targetContext.lineWidth = 1.1;
+  for (const feature of state.boundary.features || []) {
+    const geometry = feature.geometry || {};
+    const polygons = geometry.type === "Polygon" ? [geometry.coordinates] : geometry.coordinates || [];
+    for (const polygon of polygons) {
+      for (const ring of polygon) {
+        targetContext.beginPath();
+        ring.forEach(([lon, lat], index) => {
+          const [x, y] = projection(lon, lat, width, height);
+          if (index === 0) targetContext.moveTo(x, y); else targetContext.lineTo(x, y);
+        });
+        targetContext.stroke();
       }
-    ]
-  };
+    }
+  }
+  targetContext.restore();
 }
 
-async function loadArchiveDay(dateStr) {
-  try {
-    setStatus("", `Loading ${dateStr}...`);
-    const resp = await fetch(`/api/forecast/archive/day?date=${encodeURIComponent(dateStr)}`);
-    if (!resp.ok) {
-      const err = await resp.json().catch(() => ({}));
-      throw new Error(err.detail || `HTTP ${resp.status}`);
-    }
-    const data = await resp.json();
-    const formatted = formatArchiveDayAsForecast(data);
-    renderForecast(formatted);
+function drawComparisonCanvas(targetCanvas, cells, valueIndex, maximum) {
+  if (!targetCanvas) return;
+  const targetContext = targetCanvas.getContext("2d");
+  const ratio = window.devicePixelRatio || 1;
+  const rect = targetCanvas.getBoundingClientRect();
+  const width = Math.max(280, rect.width);
+  const height = width;
+  targetCanvas.width = Math.round(width * ratio);
+  targetCanvas.height = Math.round(height * ratio);
+  targetContext.setTransform(ratio, 0, 0, ratio, 0, 0);
+  targetContext.fillStyle = "#050f1b";
+  targetContext.fillRect(0, 0, width, height);
+  const safeMaximum = Math.max(Number(maximum) || 0, 1);
+  const pointSize = Math.max(1.5, width / 180);
+  for (const cell of cells) {
+    const lat = Number(cell[1]);
+    const lon = Number(cell[2]);
+    const value = Math.max(0, Number(cell[valueIndex]) || 0);
+    const scaled = Math.log1p(value) / Math.log1p(safeMaximum);
+    const [x, y] = projection(lon, lat, width, height);
+    targetContext.fillStyle = value > 0 ? getHeatmapColor(scaled, 1) : "#12243a";
+    targetContext.globalAlpha = value > 0 ? 0.92 : 0.22;
+    targetContext.fillRect(x - pointSize / 2, y - pointSize / 2, pointSize, pointSize);
+  }
+  targetContext.globalAlpha = 1;
+  drawBoundaryOn(targetContext, width, height);
+}
 
+function renderComparison(data) {
+  drawComparisonCanvas(
+    document.getElementById("comparison-predicted-map"), data.cells, 3, data.predicted_max
+  );
+  drawComparisonCanvas(
+    document.getElementById("comparison-observed-map"), data.cells, 4, data.observed_max
+  );
+  document.getElementById("comparison-spearman").textContent = Number(data.spatial_spearman).toFixed(3);
+  document.getElementById("comparison-overlap").textContent = `${(Number(data.top10_exact_overlap) * 100).toFixed(1)}%`;
+  document.getElementById("comparison-predicted-total").textContent = Number(data.predicted_total).toLocaleString(undefined, {maximumFractionDigits: 0});
+  document.getElementById("comparison-observed-total").textContent = Number(data.observed_total).toLocaleString();
+  const status = document.getElementById("comparison-status");
+  status.className = "comparison-status ready";
+  status.textContent = `${data.date} · paired untouched holdout · ${data.cells.length.toLocaleString()} cells`;
+}
+
+async function loadComparisonDay(dateStr) {
+  const status = document.getElementById("comparison-status");
+  try {
+    status.className = "comparison-status";
+    status.textContent = `Loading paired maps for ${dateStr}…`;
+    const data = await getJson(`/api/comparison/day?date=${encodeURIComponent(dateStr)}`);
+    renderComparison(data);
     document.getElementById("slider-date-display").textContent = dateStr;
     const picker = document.getElementById("archive-date-picker");
     if (picker) picker.value = dateStr;
-
     const slider = document.getElementById("archive-slider");
-    const idx = archiveDates.indexOf(dateStr);
-    if (slider && idx >= 0) slider.value = idx;
-
-    document.querySelectorAll(".preset-pill").forEach(p => {
-      p.classList.toggle("active", p.dataset.date === dateStr);
+    const index = comparisonDates.indexOf(dateStr);
+    if (slider && index >= 0) slider.value = String(index);
+    document.querySelectorAll(".preset-pill").forEach(pill => {
+      pill.classList.toggle("active", pill.dataset.date === dateStr);
     });
-
-    setStatus("ready", `Loaded 2023 archive: ${dateStr} (${data.total.toLocaleString()} strokes)`);
-  } catch (err) {
-    setStatus("error", `Archive error: ${err.message}`);
+  } catch (error) {
+    status.className = "comparison-status error";
+    status.textContent = error.message;
+    if (isComparisonPlaying) toggleComparisonPlay();
   }
 }
 
-function toggleArchivePlay() {
-  const playBtn = document.getElementById("archive-play-btn");
-  if (isArchivePlaying) {
-    clearInterval(archivePlayTimer);
-    isArchivePlaying = false;
-    if (playBtn) playBtn.textContent = "▶ Play Year";
-  } else {
-    if (!archiveDates.length) return;
-    isArchivePlaying = true;
-    if (playBtn) playBtn.textContent = "⏸ Pause";
-    archivePlayTimer = setInterval(() => {
-      const slider = document.getElementById("archive-slider");
-      if (!slider) return;
-      let nextIdx = (parseInt(slider.value, 10) + 1) % archiveDates.length;
-      slider.value = nextIdx;
-      loadArchiveDay(archiveDates[nextIdx]);
-    }, 900);
+function toggleComparisonPlay() {
+  const playButton = document.getElementById("archive-play-btn");
+  if (isComparisonPlaying) {
+    clearInterval(comparisonPlayTimer);
+    isComparisonPlaying = false;
+    if (playButton) playButton.textContent = "▶ Play 2023";
+    return;
   }
+  if (!comparisonDates.length) return;
+  isComparisonPlaying = true;
+  if (playButton) playButton.textContent = "⏸ Pause";
+  comparisonPlayTimer = setInterval(() => {
+    const slider = document.getElementById("archive-slider");
+    if (!slider) return;
+    const nextIndex = (Number(slider.value) + 1) % comparisonDates.length;
+    slider.value = String(nextIndex);
+    loadComparisonDay(comparisonDates[nextIndex]);
+  }, 1100);
 }
 
-async function initArchiveControls() {
+async function initComparisonControls() {
+  const status = document.getElementById("comparison-status");
   try {
-    const manifest = await getJson("/api/forecast/archive/dates");
-    if (manifest && manifest.dates) {
-      archiveDates = manifest.dates;
-      const slider = document.getElementById("archive-slider");
-      if (slider) {
-        slider.min = "0";
-        slider.max = String(archiveDates.length - 1);
-        const defaultDate = "2023-07-21";
-        const defIdx = archiveDates.indexOf(defaultDate);
-        if (defIdx >= 0) {
-          slider.value = String(defIdx);
-          document.getElementById("slider-date-display").textContent = defaultDate;
-        }
-      }
-    }
-  } catch (err) {
-    console.warn("Archive manifest not available:", err);
+    const manifest = await getJson("/api/comparison/dates");
+    comparisonDates = manifest.dates || [];
+    if (!comparisonDates.length) throw new Error("Comparison archive contains no dates");
+    const slider = document.getElementById("archive-slider");
+    slider.min = "0";
+    slider.max = String(comparisonDates.length - 1);
+    const defaultDate = comparisonDates.includes("2023-07-21") ? "2023-07-21" : comparisonDates[0];
+    slider.value = String(comparisonDates.indexOf(defaultDate));
+    await loadComparisonDay(defaultDate);
+  } catch (error) {
+    status.className = "comparison-status error";
+    status.textContent = error.message;
   }
 
   const picker = document.getElementById("archive-date-picker");
-  if (picker) {
-    picker.addEventListener("change", () => {
-      const val = picker.value;
-      if (val) loadArchiveDay(val);
-    });
-  }
-
+  picker?.addEventListener("change", () => picker.value && loadComparisonDay(picker.value));
   const slider = document.getElementById("archive-slider");
-  if (slider) {
-    slider.addEventListener("input", () => {
-      const idx = parseInt(slider.value, 10);
-      if (archiveDates[idx]) {
-        document.getElementById("slider-date-display").textContent = archiveDates[idx];
-      }
-    });
-    slider.addEventListener("change", () => {
-      const idx = parseInt(slider.value, 10);
-      if (archiveDates[idx]) {
-        loadArchiveDay(archiveDates[idx]);
-      }
-    });
-  }
-
-  const loadBtn = document.getElementById("archive-load-btn");
-  if (loadBtn && picker) {
-    loadBtn.addEventListener("click", () => {
-      if (picker.value) loadArchiveDay(picker.value);
-    });
-  }
-
-  const playBtn = document.getElementById("archive-play-btn");
-  if (playBtn) {
-    playBtn.addEventListener("click", toggleArchivePlay);
-  }
-
+  slider?.addEventListener("input", () => {
+    const dateValue = comparisonDates[Number(slider.value)];
+    if (dateValue) document.getElementById("slider-date-display").textContent = dateValue;
+  });
+  slider?.addEventListener("change", () => {
+    const dateValue = comparisonDates[Number(slider.value)];
+    if (dateValue) loadComparisonDay(dateValue);
+  });
+  document.getElementById("archive-load-btn")?.addEventListener("click", () => {
+    if (picker?.value) loadComparisonDay(picker.value);
+  });
+  document.getElementById("archive-play-btn")?.addEventListener("click", toggleComparisonPlay);
   document.querySelectorAll(".preset-pill").forEach(pill => {
-    pill.addEventListener("click", () => {
-      if (pill.dataset.date) {
-        loadArchiveDay(pill.dataset.date);
-      }
-    });
+    pill.addEventListener("click", () => pill.dataset.date && loadComparisonDay(pill.dataset.date));
   });
 }
 
 window.addEventListener("resize", drawMap);
 loadInitial();
-initArchiveControls();
+initComparisonControls();

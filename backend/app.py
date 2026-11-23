@@ -285,6 +285,11 @@ ARCHIVE_ZIP_URI = os.environ.get(
     "gs://nuclei-lenses/flash-model/india_lightning_2023_daily_archive.zip",
 )
 archive_initialization_lock = threading.Lock()
+COMPARISON_ARCHIVE_URI = os.environ.get(
+    "COMPARISON_ARCHIVE_URI",
+    "gs://nuclei-lenses/flash-model/india_lightning_2023_comparison_archive.zip",
+)
+comparison_initialization_lock = threading.Lock()
 
 
 def get_archive_path(oidc_token: str | None = None) -> Path:
@@ -315,6 +320,33 @@ def get_archive_path(oidc_token: str | None = None) -> Path:
         temp_path.replace(target)
         return target
 
+
+def get_comparison_archive_path(oidc_token: str | None = None) -> Path:
+    local_candidates = [
+        settings.root_dir / "data" / "india_lightning_2023_comparison_archive.zip",
+        Path(os.environ.get("ASSET_ROOT", "/tmp/india-lightning-assets")).resolve()
+        / "india_lightning_2023_comparison_archive.zip",
+        settings.output_dir / "india_lightning_2023_comparison_archive.zip",
+    ]
+    for candidate in local_candidates:
+        if candidate.is_file() and candidate.stat().st_size > 1000:
+            return candidate
+
+    target = (
+        Path(os.environ.get("ASSET_ROOT", "/tmp/india-lightning-assets")).resolve()
+        / "india_lightning_2023_comparison_archive.zip"
+    )
+    with comparison_initialization_lock:
+        if target.is_file() and target.stat().st_size > 1000:
+            return target
+        target.parent.mkdir(parents=True, exist_ok=True)
+        temporary = target.with_suffix(".zip.tmp")
+        try:
+            download_bundle(COMPARISON_ARCHIVE_URI, temporary, oidc_token=oidc_token)
+            temporary.replace(target)
+        finally:
+            temporary.unlink(missing_ok=True)
+    return target
 
 @app.get("/api/forecast/archive/dates")
 def archive_dates(request: Request = None):
@@ -361,6 +393,59 @@ def archive_day(date: str, request: Request = None):
         raise HTTPException(
             status_code=500,
             detail=f"Failed to read day {clean_date} from archive: {exc}",
+        ) from exc
+
+
+@app.get("/api/comparison/dates")
+def comparison_dates(request: Request = None):
+    token = request.headers.get("x-vercel-oidc-token") if request else None
+    try:
+        zip_path = get_comparison_archive_path(token)
+        with zipfile.ZipFile(zip_path, "r") as archive:
+            return json.loads(archive.read("manifest.json").decode("utf-8"))
+    except Exception as exc:
+        raise HTTPException(
+            status_code=503,
+            detail=(
+                "The paired 2023 model-vs-observed archive is not available yet. "
+                f"Expected {COMPARISON_ARCHIVE_URI}. {type(exc).__name__}: {exc}"
+            ),
+        ) from exc
+
+
+@app.get("/api/comparison/day")
+def comparison_day(date: str, request: Request = None):
+    token = request.headers.get("x-vercel-oidc-token") if request else None
+    clean_date = date.strip()
+    if (
+        len(clean_date) != 10
+        or clean_date[4] != "-"
+        or clean_date[7] != "-"
+        or not clean_date.startswith("2023-")
+    ):
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid comparison date: {date}. Expected YYYY-MM-DD in 2023.",
+        )
+    try:
+        zip_path = get_comparison_archive_path(token)
+        with zipfile.ZipFile(zip_path, "r") as archive:
+            filename = f"daily/{clean_date}.json"
+            if filename not in archive.namelist():
+                raise HTTPException(
+                    status_code=404,
+                    detail=f"No paired model-vs-observed result exists for {clean_date}",
+                )
+            return json.loads(archive.read(filename).decode("utf-8"))
+    except HTTPException:
+        raise
+    except Exception as exc:
+        raise HTTPException(
+            status_code=503,
+            detail=(
+                "The paired 2023 model-vs-observed archive is not available yet. "
+                f"Expected {COMPARISON_ARCHIVE_URI}. {type(exc).__name__}: {exc}"
+            ),
         ) from exc
 
 
