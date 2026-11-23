@@ -393,7 +393,7 @@ on `gs://nuclei-lenses`.
 - [x] Service account has read-only access to `gs://nuclei-lenses`.
 - [x] No `GCP_SERVICE_ACCOUNT_JSON` secret exists in Vercel or Git.
 - [x] Backend reads `x-vercel-oidc-token` only from the incoming request.
-- [ ] `/api/health` reports `status=ready` and `model_loaded=true`.
-- [ ] `/api/forecast/run` returns all four six-hour horizons.
-- [ ] Frontend renders the returned forecast map.
+- [x] `/api/health` reports `status=ready` and `model_loaded=true`.
+- [x] `/api/forecast/run` returns all four six-hour horizons.
+- [x] Frontend renders the returned forecast map.
 - [x] Cloud Shell deployment remains functional with Application Default Credentials.
