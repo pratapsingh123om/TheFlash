@@ -1,7 +1,8 @@
 __pycache__/
 *.py[cod]
 *.log
-.env
+.env*
+!.env.example
 .venv/
 .pytest_cache/
 .mypy_cache/
