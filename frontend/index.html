@@ -73,6 +73,38 @@
       </div>
     </section>
 
+    <!-- 2023 Annual Replay & All-India Monsoon Explorer -->
+    <section class="archive-bar" id="archive-bar" aria-label="2023 Historical Daily Explorer">
+      <div class="archive-top">
+        <div class="archive-badge-wrap">
+          <span class="badge badge-pulse">2023 Archive</span>
+          <strong>All-India Daily Lightning Replay</strong>
+          <span class="archive-hint">Explore any day of 2023 on demand from the cloud zip archive</span>
+        </div>
+        <div class="archive-presets">
+          <span class="presets-label">⚡ Key Days:</span>
+          <button type="button" class="preset-pill" data-date="2023-07-21">July 21 (Monsoon Peak)</button>
+          <button type="button" class="preset-pill" data-date="2023-09-15">Sept 15 (North Convection)</button>
+          <button type="button" class="preset-pill" data-date="2023-03-18">March 18 (Pre-Monsoon)</button>
+          <button type="button" class="preset-pill" data-date="2023-09-29">Sept 29 (Retreat Demo)</button>
+        </div>
+      </div>
+      <div class="archive-controls">
+        <div class="archive-date-input-wrap">
+          <label for="archive-date-picker">Date:</label>
+          <input type="date" id="archive-date-picker" min="2023-01-03" max="2023-12-31" value="2023-07-21">
+        </div>
+        <div class="archive-slider-wrap">
+          <input type="range" id="archive-slider" min="0" max="344" value="180">
+          <span id="slider-date-display" class="slider-date-display">2023-07-21</span>
+        </div>
+        <div class="archive-actions">
+          <button type="button" id="archive-play-btn" class="btn-archive-secondary">▶ Play Year</button>
+          <button type="button" id="archive-load-btn" class="btn-archive-primary">Load Day</button>
+        </div>
+      </div>
+    </section>
+
     <!-- Key Regional Metrics Summary -->
     <section class="summary-grid" aria-label="Selected forecast summary">
       <article class="summary-card">

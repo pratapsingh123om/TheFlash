@@ -560,5 +560,165 @@ runButton.addEventListener("click", async () => {
   }
 });
 
+let archiveDates = [];
+let isArchivePlaying = false;
+let archivePlayTimer = null;
+
+function formatArchiveDayAsForecast(archiveData) {
+  const cells = archiveData.cells.map(c => ({
+    grid_id: c.id,
+    lat: c.lat,
+    lon: c.lon,
+    warning_code: c.w,
+    p_none: c.w === 0 ? 0.98 : 0.05,
+    p_mild: c.w === 1 ? 0.75 : 0.10,
+    p_strong: c.w === 2 ? 0.65 : 0.15,
+    p_heavy: c.w === 3 ? 0.55 : 0.05,
+    p_strong_or_heavy_within50: c.w >= 2 ? 0.85 : 0.20,
+    p_heavy_within50: c.w === 3 ? 0.75 : 0.10,
+    expected_region50_count: c.s,
+  }));
+  const heavyCount = archiveData.cells.filter(c => c.w === 3).length;
+  const strongCount = archiveData.cells.filter(c => c.w === 2).length;
+  const mildCount = archiveData.cells.filter(c => c.w === 1).length;
+
+  return {
+    status: "complete",
+    archive_mode: true,
+    date: archiveData.date,
+    periods: [
+      {
+        horizon_hours: 24,
+        valid_time_ist: `${archiveData.date} · 24h All-India Archive (${archiveData.total.toLocaleString()} strokes)`,
+        warning_counts: {
+          none: Math.max(0, 5070 - (heavyCount + strongCount + mildCount)),
+          mild: mildCount,
+          strong: strongCount,
+          heavy: heavyCount,
+        },
+        max_heavy_probability: heavyCount > 0 ? 0.75 : 0.10,
+        cells: cells,
+      }
+    ]
+  };
+}
+
+async function loadArchiveDay(dateStr) {
+  try {
+    setStatus("", `Loading ${dateStr}...`);
+    const resp = await fetch(`/api/forecast/archive/day?date=${encodeURIComponent(dateStr)}`);
+    if (!resp.ok) {
+      const err = await resp.json().catch(() => ({}));
+      throw new Error(err.detail || `HTTP ${resp.status}`);
+    }
+    const data = await resp.json();
+    const formatted = formatArchiveDayAsForecast(data);
+    renderForecast(formatted);
+
+    document.getElementById("slider-date-display").textContent = dateStr;
+    const picker = document.getElementById("archive-date-picker");
+    if (picker) picker.value = dateStr;
+
+    const slider = document.getElementById("archive-slider");
+    const idx = archiveDates.indexOf(dateStr);
+    if (slider && idx >= 0) slider.value = idx;
+
+    document.querySelectorAll(".preset-pill").forEach(p => {
+      p.classList.toggle("active", p.dataset.date === dateStr);
+    });
+
+    setStatus("ready", `Loaded 2023 archive: ${dateStr} (${data.total.toLocaleString()} strokes)`);
+  } catch (err) {
+    setStatus("error", `Archive error: ${err.message}`);
+  }
+}
+
+function toggleArchivePlay() {
+  const playBtn = document.getElementById("archive-play-btn");
+  if (isArchivePlaying) {
+    clearInterval(archivePlayTimer);
+    isArchivePlaying = false;
+    if (playBtn) playBtn.textContent = "▶ Play Year";
+  } else {
+    if (!archiveDates.length) return;
+    isArchivePlaying = true;
+    if (playBtn) playBtn.textContent = "⏸ Pause";
+    archivePlayTimer = setInterval(() => {
+      const slider = document.getElementById("archive-slider");
+      if (!slider) return;
+      let nextIdx = (parseInt(slider.value, 10) + 1) % archiveDates.length;
+      slider.value = nextIdx;
+      loadArchiveDay(archiveDates[nextIdx]);
+    }, 900);
+  }
+}
+
+async function initArchiveControls() {
+  try {
+    const manifest = await getJson("/api/forecast/archive/dates");
+    if (manifest && manifest.dates) {
+      archiveDates = manifest.dates;
+      const slider = document.getElementById("archive-slider");
+      if (slider) {
+        slider.min = "0";
+        slider.max = String(archiveDates.length - 1);
+        const defaultDate = "2023-07-21";
+        const defIdx = archiveDates.indexOf(defaultDate);
+        if (defIdx >= 0) {
+          slider.value = String(defIdx);
+          document.getElementById("slider-date-display").textContent = defaultDate;
+        }
+      }
+    }
+  } catch (err) {
+    console.warn("Archive manifest not available:", err);
+  }
+
+  const picker = document.getElementById("archive-date-picker");
+  if (picker) {
+    picker.addEventListener("change", () => {
+      const val = picker.value;
+      if (val) loadArchiveDay(val);
+    });
+  }
+
+  const slider = document.getElementById("archive-slider");
+  if (slider) {
+    slider.addEventListener("input", () => {
+      const idx = parseInt(slider.value, 10);
+      if (archiveDates[idx]) {
+        document.getElementById("slider-date-display").textContent = archiveDates[idx];
+      }
+    });
+    slider.addEventListener("change", () => {
+      const idx = parseInt(slider.value, 10);
+      if (archiveDates[idx]) {
+        loadArchiveDay(archiveDates[idx]);
+      }
+    });
+  }
+
+  const loadBtn = document.getElementById("archive-load-btn");
+  if (loadBtn && picker) {
+    loadBtn.addEventListener("click", () => {
+      if (picker.value) loadArchiveDay(picker.value);
+    });
+  }
+
+  const playBtn = document.getElementById("archive-play-btn");
+  if (playBtn) {
+    playBtn.addEventListener("click", toggleArchivePlay);
+  }
+
+  document.querySelectorAll(".preset-pill").forEach(pill => {
+    pill.addEventListener("click", () => {
+      if (pill.dataset.date) {
+        loadArchiveDay(pill.dataset.date);
+      }
+    });
+  });
+}
+
 window.addEventListener("resize", drawMap);
 loadInitial();
+initArchiveControls();

@@ -4,6 +4,7 @@ import base64
 import json
 import os
 import threading
+import zipfile
 from contextlib import asynccontextmanager
 from dataclasses import replace
 from pathlib import Path
@@ -17,6 +18,7 @@ from .bootstrap_assets import (
     DEFAULT_BUNDLE_SHA256,
     DEFAULT_BUNDLE_URI,
     bootstrap_assets,
+    download_bundle,
 )
 from .settings import Settings, env_bool
 
@@ -203,6 +205,90 @@ def latest_forecast():
     if not path.exists():
         raise HTTPException(status_code=404, detail="No forecast has been generated yet")
     return json.loads(path.read_text(encoding="utf-8"))
+
+
+ARCHIVE_ZIP_URI = os.environ.get(
+    "ARCHIVE_ZIP_URI",
+    "gs://nuclei-lenses/flash-model/india_lightning_2023_daily_archive.zip",
+)
+archive_initialization_lock = threading.Lock()
+
+
+def get_archive_path(oidc_token: str | None = None) -> Path:
+    local_candidates = [
+        settings.root_dir / "data" / "india_lightning_2023_daily_archive.zip",
+        Path(os.environ.get("ASSET_ROOT", "/tmp/india-lightning-assets")).resolve()
+        / "india_lightning_2023_daily_archive.zip",
+        settings.output_dir / "india_lightning_2023_daily_archive.zip",
+        Path("c:/DEV/minor-project/artifacts/india_lightning_2023_daily_archive.zip"),
+    ]
+    for candidate in local_candidates:
+        if candidate.is_file() and candidate.stat().st_size > 1000:
+            return candidate
+
+    target = (
+        Path(os.environ.get("ASSET_ROOT", "/tmp/india-lightning-assets")).resolve()
+        / "india_lightning_2023_daily_archive.zip"
+    )
+    if target.is_file() and target.stat().st_size > 1000:
+        return target
+
+    with archive_initialization_lock:
+        if target.is_file() and target.stat().st_size > 1000:
+            return target
+        target.parent.mkdir(parents=True, exist_ok=True)
+        temp_path = target.with_suffix(".tmp")
+        download_bundle(ARCHIVE_ZIP_URI, temp_path, oidc_token=oidc_token)
+        temp_path.replace(target)
+        return target
+
+
+@app.get("/api/forecast/archive/dates")
+def archive_dates(request: Request = None):
+    token = request.headers.get("x-vercel-oidc-token") if request else None
+    try:
+        zip_path = get_archive_path(token)
+        with zipfile.ZipFile(zip_path, "r") as zf:
+            manifest = json.loads(zf.read("manifest.json").decode("utf-8"))
+            return manifest
+    except Exception as exc:
+        raise HTTPException(
+            status_code=500, detail=f"Failed to read archive manifest: {exc}"
+        ) from exc
+
+
+@app.get("/api/forecast/archive/day")
+def archive_day(date: str, request: Request = None):
+    token = request.headers.get("x-vercel-oidc-token") if request else None
+    clean_date = date.strip()
+    if (
+        len(clean_date) != 10
+        or clean_date[4] != "-"
+        or clean_date[7] != "-"
+        or not clean_date.startswith("2023-")
+    ):
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid date format: {date}. Expected YYYY-MM-DD in 2023.",
+        )
+
+    try:
+        zip_path = get_archive_path(token)
+        with zipfile.ZipFile(zip_path, "r") as zf:
+            filename = f"daily/{clean_date}.json"
+            if filename not in zf.namelist():
+                raise HTTPException(
+                    status_code=404,
+                    detail=f"Date {clean_date} has no recorded lightning in 2023 archive",
+                )
+            return json.loads(zf.read(filename).decode("utf-8"))
+    except HTTPException:
+        raise
+    except Exception as exc:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to read day {clean_date} from archive: {exc}",
+        ) from exc
 
 
 @app.get("/api/boundary")
