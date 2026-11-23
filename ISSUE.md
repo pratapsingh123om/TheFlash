@@ -78,11 +78,10 @@ Confirmed from the Vercel OIDC settings screen:
 ```text
 Issuer   = https://oidc.vercel.com/gps9
 Audience = https://vercel.com/gps9
-Subject  = owner:gps9:project:the-flash:environment:production
+Subject  = owner:gps9:project:the-flash-hxuh:environment:production
 ```
 
-The project in the OIDC subject is `the-flash`. Do not substitute the
-deployment-domain prefix `the-flash-hxuh`.
+Note: Vercel generates the OIDC subject with the project slug `the-flash-hxuh`.
 
 The service account already needs only this bucket role:
 

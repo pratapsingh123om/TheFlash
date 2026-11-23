@@ -15,7 +15,7 @@ export WIF_POOL_ID="${WIF_POOL_ID:-vercel}"
 export WIF_PROVIDER_ID="${WIF_PROVIDER_ID:-vercel}"
 
 export VERCEL_TEAM_SLUG="${VERCEL_TEAM_SLUG:-gps9}"
-export VERCEL_PROJECT_NAME="${VERCEL_PROJECT_NAME:-the-flash}"
+export VERCEL_PROJECT_NAME="${VERCEL_PROJECT_NAME:-the-flash-hxuh}"
 export VERCEL_ENVIRONMENT="${VERCEL_ENVIRONMENT:-production}"
 export VERCEL_ISSUER="https://oidc.vercel.com/${VERCEL_TEAM_SLUG}"
 export VERCEL_TOKEN_AUDIENCE="https://vercel.com/${VERCEL_TEAM_SLUG}"
@@ -51,13 +51,18 @@ gcloud iam workload-identity-pools providers create-oidc "$WIF_PROVIDER_ID" \
   --allowed-audiences "$VERCEL_TOKEN_AUDIENCE" \
   --attribute-mapping "google.subject=assertion.sub"
 
-export VERCEL_PRODUCTION_SUBJECT="owner:${VERCEL_TEAM_SLUG}:project:${VERCEL_PROJECT_NAME}:environment:${VERCEL_ENVIRONMENT}"
-export VERCEL_PRODUCTION_PRINCIPAL="principal://iam.googleapis.com/projects/${GCP_PROJECT_NUMBER}/locations/global/workloadIdentityPools/${WIF_POOL_ID}/subject/${VERCEL_PRODUCTION_SUBJECT}"
-
-echo "Binding roles/iam.workloadIdentityUser to service account..."
-gcloud iam service-accounts add-iam-policy-binding \
-  "$GCP_SERVICE_ACCOUNT_EMAIL" \
-  --project "$GCP_PROJECT_ID" \
+echo "Binding roles/iam.workloadIdentityUser to service account for production and preview..."
+for PROJECT in "the-flash-hxuh" "the-flash"; do
+  for ENV in "production" "preview"; do
+    SUBJECT="owner:${VERCEL_TEAM_SLUG}:project:${PROJECT}:environment:${ENV}"
+    PRINCIPAL="principal://iam.googleapis.com/projects/${GCP_PROJECT_NUMBER}/locations/global/workloadIdentityPools/${WIF_POOL_ID}/subject/${SUBJECT}"
+    gcloud iam service-accounts add-iam-policy-binding \
+      "$GCP_SERVICE_ACCOUNT_EMAIL" \
+      --project "$GCP_PROJECT_ID" \
+      --role roles/iam.workloadIdentityUser \
+      --member "$PRINCIPAL" >/dev/null 2>&1 || true
+  done
+done
   --role roles/iam.workloadIdentityUser \
   --member "$VERCEL_PRODUCTION_PRINCIPAL"
 
