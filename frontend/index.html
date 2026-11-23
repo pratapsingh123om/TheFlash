@@ -263,11 +263,11 @@
       </article>
       <article>
         <h2>Input Contract</h2>
-        <p>The backend consumes 4 consecutive 6-hour feature snapshots from ERA5 weather reanalysis and calibrated ground lightning history.</p>
+        <p>Today’s candidate consumes one complete 24-hour gridded lightning-history seed. Weather predictors are masked; the separate 2023 archive displays observations only.</p>
       </article>
       <article>
         <h2>Recursive Model Dynamics</h2>
-        <p>Horizon 1 (+6h) uses observed history; horizons 2–4 use recursive 50km regional flash density estimates to project convective propagation across India.</p>
+        <p>Horizon +6h starts from the supplied lightning lags. The +12h, +18h, and +24h horizons feed predicted 50km regional flash density back into the lag graph.</p>
       </article>
     </section>
   </main>
