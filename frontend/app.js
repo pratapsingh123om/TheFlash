@@ -197,17 +197,23 @@ function drawMap() {
 
     if (layer === "warnings") {
       const code = Number(cell.warning_code || 0);
-      context.fillStyle = warningColors[code];
-      context.globalAlpha = code === 0 ? 0.18 : 0.88;
+      if (code === 0) {
+        // Distinct visible grid point for None (Clear sky / Zero risk)
+        context.fillStyle = "#1a324d";
+        context.globalAlpha = 0.5;
+      } else {
+        context.fillStyle = warningColors[code];
+        context.globalAlpha = 0.95;
+      }
     } else if (layer === "heavy") {
-      context.fillStyle = getHeatmapColor(cell.p_heavy || 0, 0.40);
-      context.globalAlpha = (cell.p_heavy || 0) < 0.03 ? 0.15 : 0.88;
+      context.fillStyle = getHeatmapColor(cell.p_heavy || 0, 0.35);
+      context.globalAlpha = 0.85;
     } else if (layer === "severe50") {
-      context.fillStyle = getHeatmapColor(cell.p_strong_or_heavy_within50 || 0, 0.60);
-      context.globalAlpha = (cell.p_strong_or_heavy_within50 || 0) < 0.05 ? 0.15 : 0.88;
+      context.fillStyle = getHeatmapColor(cell.p_strong_or_heavy_within50 || 0, 0.55);
+      context.globalAlpha = 0.85;
     } else if (layer === "expected") {
-      context.fillStyle = getHeatmapColor(cell.expected_region50_count || 0, 40.0);
-      context.globalAlpha = (cell.expected_region50_count || 0) < 1.0 ? 0.15 : 0.88;
+      context.fillStyle = getHeatmapColor(cell.expected_region50_count || 0, 35.0);
+      context.globalAlpha = 0.85;
     }
 
     context.fillRect(x - pointSize / 2, y - pointSize / 2, pointSize, pointSize);
@@ -283,13 +289,16 @@ function updateInspector(cell) {
   const code = Number(currentCell.warning_code || 0);
   const badge = document.getElementById("insp-badge");
   badge.className = `alert-badge ${warningNames[code].toLowerCase()}`;
-  badge.textContent = warningBadges[code];
+  badge.textContent = code === 0 ? "No Lightning (Clear)" : warningBadges[code];
 
   // Calibrated probabilities
   const pHeavy = ((currentCell.p_heavy || 0) * 100).toFixed(1);
   const pStrong = ((currentCell.p_strong || 0) * 100).toFixed(1);
   const pMild = ((currentCell.p_mild || 0) * 100).toFixed(1);
   const pNone = ((currentCell.p_none || 0) * 100).toFixed(1);
+
+  const cityInfo = findNearestCity(currentCell.lat, currentCell.lon);
+  document.getElementById("insp-city").textContent = Number(pNone) >= 95 ? `${cityInfo} · Dry, stable conditions` : cityInfo;
 
   document.getElementById("insp-p-heavy").textContent = `${pHeavy}%`;
   document.getElementById("bar-p-heavy").style.width = `${pHeavy}%`;
