@@ -78,6 +78,8 @@ AUTO_RUN_FORECAST=0
 
 On a cold start, the FastAPI lifespan downloads the ZIP to Vercel's writable `/tmp` directory, verifies its SHA-256 and model contract, then loads the XGBoost artifacts. Warm function instances reuse that cache. The browser receives neither the credentials nor the bucket URL.
 
+`vercel.json` explicitly includes `frontend/**` in the FastAPI function and allows up to 300 seconds for cold-start download/model initialization. Native ML imports are deferred until startup, so `/api/health` can report an actionable error instead of the entire function returning an opaque invocation failure.
+
 If Vercel reports that the Python function is too large because of NumPy, SciPy, Polars, and XGBoost, add this project environment variable and redeploy:
 
 ```text

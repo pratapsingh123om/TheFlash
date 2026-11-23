@@ -6,9 +6,10 @@ import threading
 from contextlib import asynccontextmanager
 from dataclasses import replace
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from fastapi import FastAPI, HTTPException
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, HTMLResponse
 from fastapi.staticfiles import StaticFiles
 
 from .bootstrap_assets import (
@@ -16,12 +17,14 @@ from .bootstrap_assets import (
     DEFAULT_BUNDLE_URI,
     bootstrap_assets,
 )
-from .model_runtime import ModelRuntime
 from .settings import Settings, env_bool
+
+if TYPE_CHECKING:
+    from .model_runtime import ModelRuntime
 
 
 settings = Settings.from_env()
-runtime: ModelRuntime | None = None
+runtime: "ModelRuntime | None" = None
 runtime_error: str | None = None
 forecast_lock = threading.Lock()
 
@@ -48,6 +51,8 @@ def prepare_runtime_assets() -> None:
 def initialize_runtime() -> None:
     global runtime, runtime_error
     try:
+        from .model_runtime import ModelRuntime
+
         runtime = ModelRuntime(settings.model_dir, settings.output_dir)
         runtime_error = None
     except Exception as exc:  # Keep the UI alive so configuration errors are visible.
@@ -156,4 +161,14 @@ def boundary():
     return FileResponse(path, media_type="application/geo+json")
 
 
-app.mount("/", StaticFiles(directory=settings.static_dir, html=True), name="frontend")
+if settings.static_dir.is_dir():
+    app.mount("/", StaticFiles(directory=settings.static_dir, html=True), name="frontend")
+else:
+    @app.get("/", response_class=HTMLResponse, include_in_schema=False)
+    def missing_frontend():
+        return HTMLResponse(
+            "<h1>India Lightning API</h1>"
+            "<p>The frontend directory was not included in this deployment.</p>"
+            "<p>Inspect <a href='/api/health'>/api/health</a> for backend status.</p>",
+            status_code=503,
+        )
