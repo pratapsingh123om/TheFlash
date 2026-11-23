@@ -185,7 +185,7 @@ Add these variables to the `the-flash` Vercel project for **Production**:
 
 ```text
 GCP_PROJECT_ID=data-mines
-GCP_PROJECT_NUMBER=VALUE_PRINTED_BY_THE_SCRIPT
+GCP_PROJECT_NUMBER=939450581122
 GCP_SERVICE_ACCOUNT_EMAIL=theflash-vercel@data-mines.iam.gserviceaccount.com
 GCP_WORKLOAD_IDENTITY_POOL_ID=vercel
 GCP_WORKLOAD_IDENTITY_POOL_PROVIDER_ID=vercel
@@ -387,11 +387,11 @@ on `gs://nuclei-lenses`.
 ## Acceptance criteria
 
 - [x] Vercel Team OIDC issuer enabled for `the-flash`.
-- [ ] Google workload identity pool and OIDC provider configured.
-- [ ] Provider maps `google.subject=assertion.sub`.
-- [ ] Provider audience matches the Vercel team audience.
-- [ ] Exact production subject can impersonate `theflash-vercel`.
-- [ ] Service account has read-only access to `gs://nuclei-lenses`.
+- [x] Google workload identity pool and OIDC provider configured.
+- [x] Provider maps `google.subject=assertion.sub`.
+- [x] Provider audience matches the Vercel team audience.
+- [x] Exact production subject can impersonate `theflash-vercel`.
+- [x] Service account has read-only access to `gs://nuclei-lenses`.
 - [x] No `GCP_SERVICE_ACCOUNT_JSON` secret exists in Vercel or Git.
 - [x] Backend reads `x-vercel-oidc-token` only from the incoming request.
 - [ ] `/api/health` reports `status=ready` and `model_loaded=true`.
