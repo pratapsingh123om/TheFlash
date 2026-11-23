@@ -8,6 +8,8 @@
 # Simply paste and run this entire block in a Google Colab notebook cell.
 # =====================================================================================
 
+from __future__ import annotations
+
 import os
 import sys
 import gc
@@ -18,6 +20,7 @@ import subprocess
 import importlib.util
 from datetime import datetime, timezone
 from pathlib import Path
+from typing import Any, Dict, List, Optional, Tuple, Union
 
 # -------------------------------------------------------------------------------------
 # 1. MOUNT GOOGLE DRIVE & AUTO-INSTALL PACKAGES
