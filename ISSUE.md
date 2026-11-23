@@ -68,8 +68,21 @@ Google Cloud project: data-mines
 GCS bucket: gs://nuclei-lenses
 Model object: gs://nuclei-lenses/flash-model/india_lightning_24h_demo_ed5dec2770f7.zip
 Service account: theflash-vercel@data-mines.iam.gserviceaccount.com
-Vercel production project: the-flash-hxuh
+Vercel project: the-flash
+Vercel production domain: the-flash-hxuh.vercel.app
+Vercel team slug: gps9
 ```
+
+Confirmed from the Vercel OIDC settings screen:
+
+```text
+Issuer   = https://oidc.vercel.com/gps9
+Audience = https://vercel.com/gps9
+Subject  = owner:gps9:project:the-flash:environment:production
+```
+
+The project in the OIDC subject is `the-flash`. Do not substitute the
+deployment-domain prefix `the-flash-hxuh`.
 
 The service account already needs only this bucket role:
 
@@ -79,25 +92,24 @@ roles/storage.objectViewer
 
 ## Phase 1 — Enable Vercel OIDC
 
-In the Vercel project `the-flash-hxuh`:
+In the Vercel project `the-flash`:
 
 1. Open **Settings → Security**.
 2. Find **Secure backend access with OIDC Federation**.
 3. Select **Team issuer**.
 4. Enable OIDC.
-5. Record the exact issuer URL shown by Vercel.
-
-It should resemble:
+5. Confirm that the screen shows these exact values:
 
 ```text
-https://oidc.vercel.com/VERCEL_TEAM_SLUG
+Issuer   = https://oidc.vercel.com/gps9
+Audience = https://vercel.com/gps9
+Subject  = owner:gps9:project:the-flash:environment:production
 ```
-
-Do not guess the team slug. Copy the value shown by Vercel.
 
 ## Phase 2 — Configure Google Workload Identity Federation
 
-Run the following in Google Cloud Shell after replacing `VERCEL_TEAM_SLUG` with the exact value from Vercel.
+Run the following in Google Cloud Shell. These Vercel identity values were
+copied from the project's OIDC settings screen.
 
 ```bash
 set -euo pipefail
@@ -112,8 +124,8 @@ export GCP_SERVICE_ACCOUNT_EMAIL="theflash-vercel@${GCP_PROJECT_ID}.iam.gservice
 export WIF_POOL_ID="vercel"
 export WIF_PROVIDER_ID="vercel"
 
-export VERCEL_TEAM_SLUG="REPLACE_WITH_EXACT_TEAM_SLUG"
-export VERCEL_PROJECT_NAME="the-flash-hxuh"
+export VERCEL_TEAM_SLUG="gps9"
+export VERCEL_PROJECT_NAME="the-flash"
 export VERCEL_ENVIRONMENT="production"
 export VERCEL_ISSUER="https://oidc.vercel.com/${VERCEL_TEAM_SLUG}"
 export VERCEL_TOKEN_AUDIENCE="https://vercel.com/${VERCEL_TEAM_SLUG}"
@@ -169,7 +181,7 @@ If the provider already exists with an incorrect issuer, audience, or attribute 
 
 ## Phase 3 — Configure non-secret Vercel environment variables
 
-Add these variables to the `the-flash-hxuh` Vercel project for **Production**:
+Add these variables to the `the-flash` Vercel project for **Production**:
 
 ```text
 GCP_PROJECT_ID=data-mines
@@ -331,7 +343,7 @@ https://the-flash-hxuh.vercel.app/
 ### Google STS returns `invalid_target` or an audience error
 
 - Confirm the provider issuer exactly matches Vercel's displayed Team issuer.
-- Confirm the provider allowed audience is `https://vercel.com/VERCEL_TEAM_SLUG`.
+- Confirm the provider allowed audience is exactly `https://vercel.com/gps9`.
 - Confirm the credential `audience` uses the Google provider resource path with the numeric project number.
 
 ### `iam.serviceAccounts.getAccessToken` is denied
@@ -340,7 +352,7 @@ https://the-flash-hxuh.vercel.app/
 - The subject does not exactly match:
 
 ```text
-owner:TEAM_SLUG:project:the-flash-hxuh:environment:production
+owner:gps9:project:the-flash:environment:production
 ```
 
 - Preview deployments use `environment:preview` and require a separate principal if they should receive access.
@@ -374,7 +386,7 @@ on `gs://nuclei-lenses`.
 
 ## Acceptance criteria
 
-- [ ] Vercel Team OIDC issuer enabled for `the-flash-hxuh`.
+- [x] Vercel Team OIDC issuer enabled for `the-flash`.
 - [ ] Google workload identity pool and OIDC provider configured.
 - [ ] Provider maps `google.subject=assertion.sub`.
 - [ ] Provider audience matches the Vercel team audience.
