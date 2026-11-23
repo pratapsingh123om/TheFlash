@@ -36,7 +36,7 @@ def test_vercel_gcp_storage_client_missing_env():
     ]
     old_env = {k: os.environ.get(k) for k in env_keys}
     for k in env_keys:
-        os.environ.pop(k, None)
+        os.environ[k] = ""
 
     try:
         vercel_gcp_storage_client("mock_token")

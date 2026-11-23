@@ -8,7 +8,7 @@ from dataclasses import replace
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import FastAPI, HTTPException, Request, Response
 from fastapi.responses import FileResponse, HTMLResponse
 from fastapi.staticfiles import StaticFiles
 
@@ -195,6 +195,11 @@ def boundary():
     if not path.exists():
         raise HTTPException(status_code=404, detail="India boundary asset is missing")
     return FileResponse(path, media_type="application/geo+json")
+
+
+@app.get("/favicon.ico", include_in_schema=False)
+def favicon():
+    return Response(status_code=204)
 
 
 if settings.static_dir.is_dir():

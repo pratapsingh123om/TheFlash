@@ -43,6 +43,11 @@ DEFAULT_BUNDLE_URI = (
 DEFAULT_BUNDLE_SHA256 = (
     "0b565c63f89be15818920ab6798a46530b0e0cbdfffd6c4a5b7c8dbacf7a39d1"
 )
+DEFAULT_GCP_PROJECT_ID = "data-mines"
+DEFAULT_GCP_PROJECT_NUMBER = "939450581122"
+DEFAULT_GCP_SERVICE_ACCOUNT_EMAIL = "theflash-vercel@data-mines.iam.gserviceaccount.com"
+DEFAULT_WIF_POOL_ID = "vercel"
+DEFAULT_WIF_PROVIDER_ID = "vercel"
 PACKAGE_NAME = "india_lightning_24h_demo"
 REQUIRED_MODEL_FILES = {
     "run_configuration.json",
@@ -81,11 +86,15 @@ def vercel_gcp_storage_client(oidc_token: str) -> "storage.Client":
     from google.auth import identity_pool
     from google.cloud import storage
 
-    project_id = os.environ.get("GCP_PROJECT_ID")
-    project_number = os.environ.get("GCP_PROJECT_NUMBER")
-    service_account = os.environ.get("GCP_SERVICE_ACCOUNT_EMAIL")
-    pool_id = os.environ.get("GCP_WORKLOAD_IDENTITY_POOL_ID")
-    provider_id = os.environ.get("GCP_WORKLOAD_IDENTITY_POOL_PROVIDER_ID")
+    project_id = os.environ.get("GCP_PROJECT_ID", DEFAULT_GCP_PROJECT_ID)
+    project_number = os.environ.get("GCP_PROJECT_NUMBER", DEFAULT_GCP_PROJECT_NUMBER)
+    service_account = os.environ.get(
+        "GCP_SERVICE_ACCOUNT_EMAIL", DEFAULT_GCP_SERVICE_ACCOUNT_EMAIL
+    )
+    pool_id = os.environ.get("GCP_WORKLOAD_IDENTITY_POOL_ID", DEFAULT_WIF_POOL_ID)
+    provider_id = os.environ.get(
+        "GCP_WORKLOAD_IDENTITY_POOL_PROVIDER_ID", DEFAULT_WIF_PROVIDER_ID
+    )
 
     missing = [
         name
