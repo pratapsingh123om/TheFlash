@@ -21,7 +21,7 @@ const tooltip = document.getElementById("map-tooltip");
 const mapWrap = document.getElementById("map-wrap");
 const provenance = document.getElementById("forecast-provenance");
 
-// Major reference cities for location context
+// Major reference cities for spatial orientation
 const majorCities = [
   { name: "New Delhi", lat: 28.61, lon: 77.20 },
   { name: "Mumbai", lat: 19.07, lon: 72.87 },
@@ -65,16 +65,17 @@ function findNearestCity(lat, lon) {
 
 function setStatus(kind, text) {
   const dot = document.getElementById("status-dot");
-  dot.className = `status-dot ${kind || ""}`;
-  document.getElementById("status-text").textContent = text;
+  if (dot) dot.className = `status-dot ${kind || ""}`;
+  const textEl = document.getElementById("status-text");
+  if (textEl) textEl.textContent = text;
 }
 
 function formatTime(value) {
   if (!value) return "—";
-  return value.replace("T", " ").replace(/\+05:30$/, "") + " IST";
+  return value.replace("T", " ").replace(/\+05:30$/, "").replace(/:\d{2}$/, "") + " IST";
 }
 
-// Bounding box for mapping
+// Coordinate bounding box for India mapping
 const bounds = { west: 67.5, east: 98.5, south: 5.5, north: 37.8 };
 
 function projection(lon, lat, width, height) {
@@ -89,19 +90,16 @@ function inverseProjection(x, y, width, height) {
   return [lon, lat];
 }
 
-// Color scale interpolator for continuous probability maps
+// Continuous probability heatmap color gradient
 function getHeatmapColor(val, maxVal = 1.0) {
   const t = Math.max(0, Math.min(1, val / maxVal));
   if (t < 0.2) {
-    // 0 to 0.2: navy to cyan
     const f = t / 0.2;
     return `rgb(${Math.round(20 + 74 * f)}, ${Math.round(35 + 180 * f)}, ${Math.round(60 + 195 * f)})`;
   } else if (t < 0.5) {
-    // 0.2 to 0.5: cyan to amber
     const f = (t - 0.2) / 0.3;
     return `rgb(${Math.round(94 + 161 * f)}, ${Math.round(215 - 36 * f)}, ${Math.round(255 - 189 * f)})`;
   } else {
-    // 0.5 to 1.0: amber to bright red
     const f = (t - 0.5) / 0.5;
     return `rgb(${Math.round(255)}, ${Math.round(179 - 108 * f)}, ${Math.round(66 + 37 * f)})`;
   }
@@ -114,7 +112,6 @@ function drawGridLines(width, height) {
   context.fillStyle = "rgba(120, 150, 185, 0.45)";
   context.font = "10px Inter, system-ui, sans-serif";
 
-  // Latitude parallels (10, 15, 20, 25, 30, 35)
   for (let lat = 10; lat <= 35; lat += 5) {
     const [, y] = projection(bounds.west, lat, width, height);
     context.beginPath();
@@ -124,7 +121,6 @@ function drawGridLines(width, height) {
     context.fillText(`${lat}°N`, 8, y - 4);
   }
 
-  // Longitude meridians (70, 75, 80, 85, 90, 95)
   for (let lon = 70; lon <= 95; lon += 5) {
     const [x] = projection(lon, bounds.south, width, height);
     context.beginPath();
@@ -172,17 +168,13 @@ function drawMap() {
   context.setTransform(ratio, 0, 0, ratio, 0, 0);
   context.clearRect(0, 0, width, height);
 
-  // Background ocean/continent gradient
   const gradient = context.createLinearGradient(0, 0, 0, height);
   gradient.addColorStop(0, "#081b2e");
   gradient.addColorStop(1, "#050f1b");
   context.fillStyle = gradient;
   context.fillRect(0, 0, width, height);
 
-  // Coordinate grid lines
   drawGridLines(width, height);
-
-  // India boundary
   drawBoundary(width, height);
 
   if (!state.forecast) return;
@@ -192,14 +184,12 @@ function drawMap() {
   const pointSize = Math.max(2.4, Math.min(5.2, width / 230));
   const layer = state.selectedLayer;
 
-  // Draw lightning cells
   for (const cell of period.cells) {
     const [x, y] = projection(cell.lon, cell.lat, width, height);
 
     if (layer === "warnings") {
       const code = Number(cell.warning_code || 0);
       if (code === 0) {
-        // Distinct visible grid point for None (Clear sky / Zero risk)
         context.fillStyle = "#1a324d";
         context.globalAlpha = 0.5;
       } else {
@@ -221,7 +211,6 @@ function drawMap() {
   }
   context.globalAlpha = 1.0;
 
-  // Highlight selected cell if pinned
   if (state.selectedCell) {
     const [sx, sy] = projection(state.selectedCell.lon, state.selectedCell.lat, width, height);
     context.save();
@@ -233,7 +222,6 @@ function drawMap() {
     context.arc(sx, sy, Math.max(pointSize * 2.2, 8), 0, Math.PI * 2);
     context.stroke();
 
-    // Crosshair lines
     context.beginPath();
     context.moveTo(sx - 14, sy); context.lineTo(sx - 5, sy);
     context.moveTo(sx + 5, sy); context.lineTo(sx + 14, sy);
@@ -243,7 +231,6 @@ function drawMap() {
     context.restore();
   }
 
-  // Highlight hovered cell
   if (state.hoveredCell && state.hoveredCell !== state.selectedCell) {
     const [hx, hy] = projection(state.hoveredCell.lon, state.hoveredCell.lat, width, height);
     context.save();
@@ -256,7 +243,6 @@ function drawMap() {
   }
 }
 
-// Find closest cell to geographic coordinates
 function findNearestCell(cells, clickLon, clickLat, maxDistanceDeg = 1.2) {
   let nearest = null;
   let minDistanceSq = maxDistanceDeg * maxDistanceDeg;
@@ -276,12 +262,13 @@ function findNearestCell(cells, clickLon, clickLat, maxDistanceDeg = 1.2) {
 function updateInspector(cell) {
   if (!cell || !state.forecast) return;
 
-  document.getElementById("inspector-placeholder").style.display = "none";
-  document.getElementById("inspector-content").style.display = "block";
+  const placeholder = document.getElementById("inspector-placeholder");
+  const content = document.getElementById("inspector-content");
+  if (placeholder) placeholder.style.display = "none";
+  if (content) content.style.display = "block";
   document.getElementById("inspector-status").textContent = "Location pinned";
 
   const period = state.forecast.periods[state.selected];
-  // Match cell in current horizon
   const currentCell = period.cells.find(c => c.grid_id === cell.grid_id) || cell;
 
   document.getElementById("insp-coord").textContent = `${currentCell.lat.toFixed(2)}°N, ${currentCell.lon.toFixed(2)}°E`;
@@ -292,7 +279,6 @@ function updateInspector(cell) {
   badge.className = `alert-badge ${warningNames[code].toLowerCase()}`;
   badge.textContent = code === 0 ? "No Lightning (Clear)" : warningBadges[code];
 
-  // Calibrated probabilities
   const pHeavy = ((currentCell.p_heavy || 0) * 100).toFixed(1);
   const pStrong = ((currentCell.p_strong || 0) * 100).toFixed(1);
   const pMild = ((currentCell.p_mild || 0) * 100).toFixed(1);
@@ -313,12 +299,10 @@ function updateInspector(cell) {
   document.getElementById("insp-p-none").textContent = `${pNone}%`;
   document.getElementById("bar-p-none").style.width = `${pNone}%`;
 
-  // 50km regional metrics
   const pQ95_50 = ((currentCell.p_strong_or_heavy_within50 || 0) * 100).toFixed(1);
   document.getElementById("insp-p-q95-50").textContent = `${pQ95_50}%`;
   document.getElementById("insp-exp-count").textContent = (currentCell.expected_region50_count || 0).toFixed(1);
 
-  // 24-hour progression at this location
   const timeline = document.getElementById("insp-timeline");
   timeline.replaceChildren();
 
@@ -350,7 +334,7 @@ function selectHorizon(index) {
   ).toLocaleString();
   document.getElementById("heavy-count").textContent = period.warning_counts.heavy.toLocaleString();
   document.getElementById("peak-heavy").textContent = `${(period.max_heavy_probability * 100).toFixed(1)}%`;
-  document.getElementById("map-title").textContent = `${period.horizon_hours}-Hour Outlook · ${formatTime(period.valid_time_ist)}`;
+  document.getElementById("map-title").textContent = `${period.horizon_hours}-Hour Outlook · Valid: ${formatTime(period.valid_time_ist)}`;
 
   if (state.selectedCell) {
     updateInspector(state.selectedCell);
@@ -372,22 +356,22 @@ function selectLayer(layerName) {
   if (layerName === "warnings") {
     catLegend.style.display = "flex";
     heatLegend.style.display = "none";
-    layerLabel.textContent = "Regional Warning Map";
+    layerLabel.textContent = "Regional Warning Map (Calibrated Categories)";
   } else if (layerName === "heavy") {
     catLegend.style.display = "none";
     heatLegend.style.display = "flex";
     maxLabel.textContent = "40%+";
-    layerLabel.textContent = "Heavy Storm Probability (Q99)";
+    layerLabel.textContent = "Heavy Storm Probability (Q99 within 50 km)";
   } else if (layerName === "severe50") {
     catLegend.style.display = "none";
     heatLegend.style.display = "flex";
     maxLabel.textContent = "60%+";
-    layerLabel.textContent = "50km Severe Storm Risk";
+    layerLabel.textContent = "Severe Storm Risk (Q95+ within 50 km)";
   } else if (layerName === "expected") {
     catLegend.style.display = "none";
     heatLegend.style.display = "flex";
     maxLabel.textContent = "40+ Flashes";
-    layerLabel.textContent = "50km Expected Flash Density";
+    layerLabel.textContent = "Expected 50 km Regional Flash Density";
   }
   drawMap();
 }
@@ -398,7 +382,7 @@ function toggleAnimation() {
     state.isPlaying = false;
     playButton.classList.remove("playing");
     document.getElementById("play-icon").textContent = "▶";
-    document.getElementById("play-text").textContent = "Animate";
+    document.getElementById("play-text").textContent = "Animate 24h";
   } else {
     if (!state.forecast) return;
     state.isPlaying = true;
@@ -412,31 +396,53 @@ function toggleAnimation() {
   }
 }
 
+function updateProvenanceRibbon(seedInfo, issueTime) {
+  const seedBadge = document.getElementById("meta-seed-status");
+  const seedTimeEl = document.getElementById("meta-seed-time");
+  const issueTimeEl = document.getElementById("meta-issue-time");
+
+  if (issueTimeEl && issueTime) {
+    issueTimeEl.textContent = formatTime(issueTime);
+  }
+
+  if (!seedInfo || !seedBadge) return;
+
+  const isCurrent = Boolean(seedInfo.is_current);
+  const obsTime = seedInfo.observation_time_ist ? formatTime(seedInfo.observation_time_ist) : "None recorded";
+
+  if (seedTimeEl) {
+    seedTimeEl.textContent = obsTime;
+  }
+
+  if (isCurrent) {
+    seedBadge.className = "seed-badge live";
+    seedBadge.textContent = "🟢 Live Seed Feed";
+  } else {
+    seedBadge.className = "seed-badge stale";
+    seedBadge.textContent = "🟠 Stale Rebase (Demonstration)";
+  }
+}
+
 function updateForecastProvenance(payload) {
   if (!provenance) return;
   provenance.className = "";
 
-  if (payload.archive_mode || payload.forecast_kind === "observed_2023_archive") {
-    provenance.classList.add("provenance-observed");
-    provenance.textContent = "Observed 2023 lightning — historical reality, not a forecast.";
-    return;
-  }
+  const seed = payload.lightning_history_seed || {};
+  const firstPeriod = payload.periods && payload.periods[0];
+  const issueTime = firstPeriod ? firstPeriod.issue_time_ist : null;
+  updateProvenanceRibbon(seed, issueTime);
 
   if (payload.forecast_mode === "lightning_only_today") {
-    const seed = payload.lightning_history_seed || {};
     const seedTime = seed.observation_time_ist ? formatTime(seed.observation_time_ist) : "unknown";
     if (seed.is_current) {
-      provenance.classList.add("provenance-live");
-      provenance.textContent = `Today’s lightning-only recursive candidate. Recent history seed: ${seedTime}. Weather inputs are excluded.`;
+      provenance.textContent = `Today’s lightning-only recursive candidate. Recent history seed: ${seedTime}. Weather predictors excluded for pure lag demonstration.`;
     } else {
-      provenance.classList.add("provenance-stale");
-      provenance.textContent = `Time-rebased candidate only — the available lightning seed (${seedTime}) is not current. Add LIGHTNING_HISTORY_PARQUET for a genuine today forecast.`;
+      provenance.textContent = `Time-rebased demonstration candidate — the lightning-history seed (${seedTime}) is a historical replay. Lacks live lightning feed for genuine real-time alert.`;
     }
     return;
   }
 
-  provenance.classList.add("provenance-replay");
-  provenance.textContent = "Retrospective model replay using historical features — not a forecast for today.";
+  provenance.textContent = "Retrospective model replay using historical physics and lightning features — not a forecast for today.";
 }
 
 function renderForecast(payload) {
@@ -541,12 +547,10 @@ document.getElementById("city-chips").querySelectorAll(".chip").forEach(chip => 
   });
 });
 
-// Layer Buttons
 document.querySelectorAll(".layer-btn").forEach(btn => {
   btn.addEventListener("click", () => selectLayer(btn.dataset.layer));
 });
 
-// Play/Pause button
 playButton.addEventListener("click", toggleAnimation);
 
 async function getJson(url, options) {
@@ -560,13 +564,35 @@ async function loadInitial() {
   try {
     state.boundary = await getJson("/api/boundary");
   } catch (error) {
-    console.warn("Boundary unavailable", error);
+    console.warn("Boundary asset unavailable", error);
   }
+
+  try {
+    const config = await getJson("/api/config");
+    if (config.model) {
+      const modelEl = document.getElementById("meta-model-info");
+      if (modelEl) {
+        modelEl.textContent = `Native 0.25° Physics Model (${config.model.feature_count} Predictors · Frozen 2022)`;
+      }
+    }
+    if (config.latest_forecast_meta) {
+      const meta = config.latest_forecast_meta;
+      updateProvenanceRibbon(meta.lightning_history_seed, meta.issue_time_ist);
+    }
+  } catch (error) {
+    console.warn("Config load error", error);
+  }
+
   try {
     const health = await getJson("/api/health");
-    if (health.status === "ready") setStatus("ready", "Model ready");
-    else setStatus("error", health.error || "Configuration required");
-    if (health.forecast_exists) renderForecast(await getJson("/api/forecast/latest"));
+    if (health.status === "ready") {
+      setStatus("ready", "Model ready");
+    } else {
+      setStatus("error", health.error || "Configuration required");
+    }
+    if (health.forecast_exists) {
+      renderForecast(await getJson("/api/forecast/latest"));
+    }
   } catch (error) {
     setStatus("error", error.message);
   }
@@ -575,7 +601,7 @@ async function loadInitial() {
 
 runButton.addEventListener("click", async () => {
   runButton.disabled = true;
-  runButton.textContent = "Generating forecast...";
+  runButton.textContent = "⏳ Running recursive forecast...";
   setStatus("", "Forecast running");
   try {
     const payload = await getJson("/api/forecast/run?mode=lightning_only_today", { method: "POST" });
@@ -583,16 +609,17 @@ runButton.addEventListener("click", async () => {
     const isCurrent = Boolean(payload.lightning_history_seed?.is_current);
     setStatus(
       isCurrent ? "ready" : "",
-      isCurrent ? "Current candidate complete" : "Candidate complete · history seed is stale"
+      isCurrent ? "Current candidate complete" : "Candidate complete · historical seed rebased"
     );
   } catch (error) {
     setStatus("error", error.message);
   } finally {
     runButton.disabled = false;
-    runButton.textContent = "Forecast today · next 24 h";
+    runButton.textContent = "⚡ Forecast today · next 24 h";
   }
 });
 
+// SECTION 2: 2023 Comparison Player Logic
 let comparisonDates = [];
 let isComparisonPlaying = false;
 let comparisonPlayTimer = null;
@@ -633,6 +660,7 @@ function drawComparisonCanvas(targetCanvas, cells, valueIndex, maximum) {
   targetContext.fillRect(0, 0, width, height);
   const safeMaximum = Math.max(Number(maximum) || 0, 1);
   const pointSize = Math.max(1.5, width / 180);
+
   for (const cell of cells) {
     const lat = Number(cell[1]);
     const lon = Number(cell[2]);
@@ -648,8 +676,7 @@ function drawComparisonCanvas(targetCanvas, cells, valueIndex, maximum) {
 }
 
 function renderComparison(data) {
-  // A shared scale is essential for an honest magnitude comparison. Separate
-  // maxima can make a severely underpredicted map look as intense as reality.
+  // Shared color scale is essential for an honest magnitude comparison.
   const sharedMaximum = Math.max(
     Number(data.predicted_max) || 0,
     Number(data.observed_max) || 0,
@@ -661,6 +688,7 @@ function renderComparison(data) {
   drawComparisonCanvas(
     document.getElementById("comparison-observed-map"), data.cells, 4, sharedMaximum
   );
+
   document.getElementById("comparison-spearman").textContent = Number(data.spatial_spearman).toFixed(3);
   document.getElementById("comparison-overlap").textContent = `${(Number(data.top10_exact_overlap) * 100).toFixed(1)}%`;
   const regionalMassRatio = Number(data.observed_total) > 0
@@ -669,9 +697,10 @@ function renderComparison(data) {
   document.getElementById("comparison-ratio").textContent = `${(regionalMassRatio * 100).toFixed(1)}%`;
   document.getElementById("comparison-predicted-total").textContent = Number(data.predicted_total).toLocaleString(undefined, {maximumFractionDigits: 0});
   document.getElementById("comparison-observed-total").textContent = Number(data.observed_total).toLocaleString();
+
   const status = document.getElementById("comparison-status");
   status.className = "comparison-status ready";
-  status.textContent = `${data.date} · independent +6h chronological holdout · shared color scale · ${data.cells.length.toLocaleString()} cells`;
+  status.textContent = `Date: ${data.date} · Independent +6h Holdout Inference · Single Shared Color Scale · ${data.cells.length.toLocaleString()} Grid Cells`;
 }
 
 async function loadComparisonDay(dateStr) {
@@ -731,7 +760,7 @@ async function initComparisonControls() {
     await loadComparisonDay(defaultDate);
   } catch (error) {
     status.className = "comparison-status error";
-    status.textContent = error.message;
+    status.textContent = `Awaiting v2 Comparison Archive: ${error.message}`;
   }
 
   const picker = document.getElementById("archive-date-picker");

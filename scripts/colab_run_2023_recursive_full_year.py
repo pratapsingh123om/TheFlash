@@ -58,9 +58,26 @@ model_bundle = Path("/content/india_lightning_24h_demo_ed5dec2770f7.zip")
 model_cache = Path("/content/india_lightning_exact_model_ed5dec2770f7")
 model_dir = model_cache / "india_lightning_24h_demo" / "models"
 
+drive_bundle = work / "india_lightning_24h_demo_ed5dec2770f7.zip"
+if not model_bundle.is_file() and drive_bundle.is_file():
+    print(f"Found deployment model bundle on Google Drive: {drive_bundle}")
+    model_bundle = drive_bundle
+
 if not model_bundle.is_file() or hashlib.sha256(model_bundle.read_bytes()).hexdigest() != model_bundle_sha256:
-    print("Downloading the exact frozen deployment model bundle...")
-    urllib.request.urlretrieve(model_bundle_url, model_bundle)
+    print("Obtaining the exact frozen deployment model bundle...")
+    try:
+        urllib.request.urlretrieve(model_bundle_url, model_bundle)
+    except Exception as exc:
+        print(f"Direct URL download failed ({exc}); attempting gsutil copy...")
+        subprocess.run(
+            [
+                "gsutil",
+                "cp",
+                "gs://nuclei-lenses/flash-model/india_lightning_24h_demo_ed5dec2770f7.zip",
+                str(model_bundle),
+            ],
+            check=False,
+        )
 
 actual_sha256 = hashlib.sha256(model_bundle.read_bytes()).hexdigest()
 if actual_sha256 != model_bundle_sha256:
@@ -89,4 +106,19 @@ command = [
 
 print("Running corrected independent +6-hour 2023 holdout inference...")
 subprocess.run(command, check=True)
-print(f"\nREADY TO UPLOAD:\n{archive}")
+print(f"\nArchive generated and verified successfully at:\n{archive}")
+
+print("\nUploading corrected v2 archive to Google Cloud Storage...")
+upload_result = subprocess.run(
+    [
+        "gsutil",
+        "cp",
+        str(archive),
+        "gs://nuclei-lenses/flash-model/india_lightning_2023_comparison_archive_v2.zip",
+    ],
+    check=False,
+)
+if upload_result.returncode == 0:
+    print("\nSUCCESS: Corrected v2 archive uploaded to gs://nuclei-lenses/flash-model/india_lightning_2023_comparison_archive_v2.zip")
+else:
+    print(f"\nUpload command to run in Cloud Shell or authenticated terminal:\ngsutil cp {archive} gs://nuclei-lenses/flash-model/india_lightning_2023_comparison_archive_v2.zip")

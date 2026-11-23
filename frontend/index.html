@@ -3,101 +3,87 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="Twenty-four-hour recursive India lightning forecast demonstration">
-  <title>India Lightning 24-Hour Demo</title>
+  <meta name="description" content="India Lightning Forecasting System — 2023 Chronological Holdout Benchmark and Current 24-Hour Recursive Demonstration">
+  <title>India Lightning Risk Outlook</title>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⚡</text></svg>">
   <link rel="stylesheet" href="/styles.css">
 </head>
 <body>
+  <!-- SECTION 1: Project Status & Header -->
   <header class="topbar">
-    <div>
-      <p class="eyebrow">Operational Research Demo</p>
-      <h1>India Lightning Outlook</h1>
-      <p class="subtitle">Frozen 2023 chronological-holdout comparison plus today’s four-horizon recursive outlook</p>
+    <div class="header-main">
+      <div class="header-badges">
+        <span class="badge badge-prototype">Research Prototype</span>
+        <span class="badge badge-grid">Native 0.25° Grid (~28 km)</span>
+        <span class="badge badge-model">106-Feature XGBoost Ensemble</span>
+      </div>
+      <h1>India Lightning Risk Outlook</h1>
+      <p class="subtitle">Frozen 2023 Chronological-Holdout Evaluation & Current +24-Hour Recursive Demonstration</p>
     </div>
     <div class="status-wrap">
       <span id="status-dot" class="status-dot"></span>
-      <span id="status-text">Checking model</span>
+      <span id="status-text">Checking model runtime…</span>
     </div>
   </header>
 
   <main>
-    <section class="notice" aria-label="Model limitation">
-      <strong>Research demonstration only.</strong>
-      <span id="forecast-provenance">
-        Today’s candidate uses lightning history only. Later intervals recursively feed the model’s predicted regional
-        lightning state. A current forecast requires a recent history seed; stale fallback data is visibly identified.
-      </span>
-    </section>
-
-    <!-- Top Controls: Horizons, Sequence Player, View Layer, Action -->
-    <section class="controls-panel">
-      <div class="controls-row">
-        <div class="control-group">
-          <span class="label">Forecast Horizon</span>
-          <div class="horizon-wrapper">
-            <div id="horizon-buttons" class="horizon-buttons"></div>
-            <button id="play-button" type="button" class="btn-secondary" title="Play 24-hour sequence animation">
-              <span id="play-icon">▶</span> <span id="play-text">Animate</span>
-            </button>
-          </div>
-        </div>
-
-        <div class="control-group">
-          <span class="label">Map Display Layer</span>
-          <div class="layer-buttons" id="layer-buttons">
-            <button type="button" class="layer-btn active" data-layer="warnings">Warning Alerts</button>
-            <button type="button" class="layer-btn" data-layer="heavy">Heavy Probability</button>
-            <button type="button" class="layer-btn" data-layer="severe50">Severe 50km Risk</button>
-            <button type="button" class="layer-btn" data-layer="expected">Expected Strikes</button>
-          </div>
-        </div>
-
-        <div class="control-group control-action">
-          <button id="run-button" type="button" class="btn-primary">Forecast today · next 24 h</button>
-        </div>
+    <!-- Section 1 Status Ribbon -->
+    <section class="provenance-ribbon" aria-label="Runtime Status and Data Provenance">
+      <div class="ribbon-item">
+        <span class="ribbon-label">Model Architecture</span>
+        <strong id="meta-model-info">Native 0.25° Physics Ensemble (Frozen 2022)</strong>
       </div>
-
-      <!-- Quick Location Jump Chips -->
-      <div class="quick-locations">
-        <span class="quick-label">📍 Quick Inspect:</span>
-        <div class="chips-container" id="city-chips">
-          <button type="button" class="chip" data-lat="28.61" data-lon="77.20">New Delhi</button>
-          <button type="button" class="chip" data-lat="22.57" data-lon="88.36">Kolkata</button>
-          <button type="button" class="chip" data-lat="19.07" data-lon="72.87">Mumbai</button>
-          <button type="button" class="chip" data-lat="20.29" data-lon="85.82">Bhubaneswar</button>
-          <button type="button" class="chip" data-lat="21.14" data-lon="79.08">Nagpur</button>
-          <button type="button" class="chip" data-lat="17.38" data-lon="78.48">Hyderabad</button>
-          <button type="button" class="chip" data-lat="12.97" data-lon="77.59">Bengaluru</button>
-          <button type="button" class="chip" data-lat="26.14" data-lon="91.73">Guwahati</button>
-          <button type="button" class="chip" data-lat="25.59" data-lon="85.13">Patna</button>
-        </div>
+      <div class="ribbon-item">
+        <span class="ribbon-label">History Seed Status</span>
+        <strong id="meta-seed-status" class="seed-badge">Checking seed…</strong>
+      </div>
+      <div class="ribbon-item">
+        <span class="ribbon-label">Seed Observation Time</span>
+        <strong id="meta-seed-time">—</strong>
+      </div>
+      <div class="ribbon-item">
+        <span class="ribbon-label">Forecast Issue Time</span>
+        <strong id="meta-issue-time">—</strong>
       </div>
     </section>
 
-    <!-- 2023 chronological-holdout comparison player -->
-    <section class="archive-bar" id="archive-bar" aria-label="2023 Model Versus Observed Comparison Player">
-      <div class="archive-top">
-        <div class="archive-badge-wrap">
-          <span class="badge badge-pulse">2023 Holdout</span>
-          <strong>Model Forecast vs Observed Reality</strong>
-          <span class="archive-hint">The model was frozen on 2022; 2023 is chronological-holdout development evidence because its results have now been inspected</span>
+    <!-- Operational Notice Banner -->
+    <div class="notice-banner" role="alert">
+      <div class="notice-icon">⚠️</div>
+      <div class="notice-text">
+        <strong>Research Demonstration Prototype · Not for Operational Public Safety Alerts.</strong>
+        <span id="forecast-provenance">
+          Today’s candidate outlook is an experimental recursive demonstration based on lightning-history lags. Always refer to official India Meteorological Department (IMD) / Damini forecasts for safety-critical decisions.
+        </span>
+      </div>
+    </div>
+
+    <!-- SECTION 2: 2023 Model-versus-Observed Comparison Player -->
+    <section class="section-card archive-section" id="section-comparison" aria-label="Section 2: 2023 Model Versus Observed Comparison Player">
+      <div class="section-header">
+        <div class="section-title-wrap">
+          <span class="section-tag">Section 2</span>
+          <h2>2023 Benchmark: Model Forecast vs Observed Reality</h2>
+          <p class="section-desc">
+            Frozen 2022 model evaluated on 2023 chronological holdout data. Every 6-hour window is predicted independently using observed pre-issue history. Predicted and observed maps share an identical logarithmic color scale to guarantee honest visual magnitude comparison.
+          </p>
         </div>
         <div class="archive-presets">
-          <span class="presets-label">⚡ Key Days:</span>
+          <span class="presets-label">⚡ Benchmark Days:</span>
           <button type="button" class="preset-pill" data-date="2023-07-21">July 21 (Monsoon Peak)</button>
           <button type="button" class="preset-pill" data-date="2023-09-15">Sept 15 (North Convection)</button>
           <button type="button" class="preset-pill" data-date="2023-03-18">March 18 (Pre-Monsoon)</button>
           <button type="button" class="preset-pill" data-date="2023-09-29">Sept 29 (Retreat Demo)</button>
         </div>
       </div>
-      <div class="archive-controls">
+
+      <div class="archive-controls-bar">
         <div class="archive-date-input-wrap">
-          <label for="archive-date-picker">Date:</label>
+          <label for="archive-date-picker">Date (2023):</label>
           <input type="date" id="archive-date-picker" min="2023-01-01" max="2023-12-31" value="2023-07-21">
         </div>
         <div class="archive-slider-wrap">
-          <input type="range" id="archive-slider" min="0" max="344" value="180">
+          <input type="range" id="archive-slider" min="0" max="364" value="201" aria-label="Select day of year 2023">
           <span id="slider-date-display" class="slider-date-display">2023-07-21</span>
         </div>
         <div class="archive-actions">
@@ -105,196 +91,566 @@
           <button type="button" id="archive-load-btn" class="btn-archive-primary">Compare Day</button>
         </div>
       </div>
-      <div id="comparison-status" class="comparison-status">Loading paired 2023 archive…</div>
-      <div class="comparison-metrics" aria-label="Daily comparison metrics">
-        <span>Spatial Spearman <strong id="comparison-spearman">—</strong></span>
-        <span>Top-10% overlap <strong id="comparison-overlap">—</strong></span>
-        <span>Regional-mass ratio <strong id="comparison-ratio">—</strong></span>
-        <span>Predicted overlapping regional mass <strong id="comparison-predicted-total">—</strong></span>
-        <span>Observed overlapping regional mass <strong id="comparison-observed-total">—</strong></span>
+
+      <div id="comparison-status" class="comparison-status">Loading paired 2023 benchmark archive…</div>
+
+      <!-- Daily Comparison Quantitative Metrics Ribbon -->
+      <div class="comparison-metrics" aria-label="Daily Quantitative Holdout Metrics">
+        <div class="metric-card">
+          <span class="metric-title">Spatial Spearman (r<sub>s</sub>)</span>
+          <strong id="comparison-spearman">—</strong>
+          <span class="metric-sub">Rank correlation across grid cells</span>
+        </div>
+        <div class="metric-card">
+          <span class="metric-title">Top-10% Hotspot Overlap</span>
+          <strong id="comparison-overlap">—</strong>
+          <span class="metric-sub">Exact spatial agreement of severe areas</span>
+        </div>
+        <div class="metric-card">
+          <span class="metric-title">Regional-Mass Recovery</span>
+          <strong id="comparison-ratio">—</strong>
+          <span class="metric-sub">Predicted vs Observed total mass</span>
+        </div>
+        <div class="metric-card">
+          <span class="metric-title">Predicted Regional Mass</span>
+          <strong id="comparison-predicted-total">—</strong>
+          <span class="metric-sub">Daily sum of 50 km regional targets</span>
+        </div>
+        <div class="metric-card">
+          <span class="metric-title">Observed Regional Mass</span>
+          <strong id="comparison-observed-total">—</strong>
+          <span class="metric-sub">Daily sum of 50 km observed targets</span>
+        </div>
       </div>
-      <div class="comparison-maps">
+
+      <!-- Side-by-Side Dual Map Displays (Single Shared Color Scale) -->
+      <div class="comparison-maps-container">
         <article class="comparison-map-card">
-          <h3>Model forecast</h3>
-          <p>Independent +6h holdout forecasts summed by day (overlapping 50 km regions)</p>
-          <canvas id="comparison-predicted-map" width="620" height="620" aria-label="Model-predicted 2023 lightning map"></canvas>
+          <div class="map-card-header">
+            <h3>Model Forecast (+6h Independent Holdouts)</h3>
+            <span class="map-tag model-tag">Predicted Regional Severity</span>
+          </div>
+          <p class="map-desc">Daily sum of four independent +6h windows (retaining observed history at each window issue time).</p>
+          <div class="canvas-wrapper">
+            <canvas id="comparison-predicted-map" width="620" height="620" aria-label="Model predicted 2023 lightning map"></canvas>
+          </div>
         </article>
+
         <article class="comparison-map-card">
-          <h3>Observed reality</h3>
-          <p>Observed targets for the same windows and overlapping 50 km regions</p>
-          <canvas id="comparison-observed-map" width="620" height="620" aria-label="Observed 2023 lightning map"></canvas>
+          <div class="map-card-header">
+            <h3>Observed Ground Truth (WWLLN Reality)</h3>
+            <span class="map-tag obs-tag">Observed Regional Severity</span>
+          </div>
+          <p class="map-desc">Observed regional targets for the exact same windows and 50 km circular radii.</p>
+          <div class="canvas-wrapper">
+            <canvas id="comparison-observed-map" width="620" height="620" aria-label="Observed 2023 lightning reality map"></canvas>
+          </div>
         </article>
       </div>
+
+      <!-- Explanatory note on regional mass targets -->
+      <div class="target-explanation-box">
+        <strong>💡 Target Definition & Interpretation Note:</strong>
+        <p>
+          Totals represent <strong>Overlapping 50 km Regional Mass</strong> (cumulative lightning activity within 50 km of each cell center), designed to measure spatial convective footprint and severe impact hazard. They are <em>not unique point strike counts</em> across India. Full-year 2023 evaluation recovers <strong>16,130,726</strong> predicted mass vs <strong>23,681,832</strong> observed mass (<strong>68.11%</strong> regional mass recovery).
+        </p>
+      </div>
     </section>
 
-    <!-- Key Regional Metrics Summary -->
-    <section class="summary-grid" aria-label="Selected forecast summary">
-      <article class="summary-card">
-        <span>Valid Time (IST)</span>
-        <strong id="valid-time">Not generated</strong>
-      </article>
-      <article class="summary-card">
-        <span>Strong or Heavy Alerts</span>
-        <strong id="strong-count">—</strong>
-      </article>
-      <article class="summary-card">
-        <span>Heavy Alerts (Q99)</span>
-        <strong id="heavy-count">—</strong>
-      </article>
-      <article class="summary-card">
-        <span>Peak Heavy Probability</span>
-        <strong id="peak-heavy">—</strong>
-      </article>
-    </section>
-
-    <!-- Main Visual Panel: Map Canvas + Interactive Location Inspector -->
-    <section class="visual-panel">
-      <div class="panel-heading">
-        <div>
-          <p class="eyebrow" id="layer-label">Regional warning map</p>
-          <h2 id="map-title">Waiting for a forecast</h2>
+    <!-- SECTION 3: Current 24-Hour Recursive Candidate Forecast -->
+    <section class="section-card forecast-section" id="section-current-forecast" aria-label="Section 3: Current 24-Hour Candidate Forecast">
+      <div class="section-header">
+        <div class="section-title-wrap">
+          <span class="section-tag">Section 3</span>
+          <h2>Current 24-Hour Candidate Forecast</h2>
+          <p class="section-desc">
+            Experimental 4-step recursive outlook (+6h, +12h, +18h, +24h) driven by recent gridded lightning-history lags.
+          </p>
         </div>
-        <div class="legend" id="map-legend" aria-label="Storm class legend">
-          <div id="category-legend" class="category-legend">
-            <span><i class="none"></i>None</span>
-            <span><i class="mild"></i>Mild</span>
-            <span><i class="strong"></i>Strong</span>
-            <span><i class="heavy"></i>Heavy</span>
+      </div>
+
+      <!-- Visible Uncertainty Growth Disclaimer -->
+      <div class="uncertainty-warning-box">
+        <div class="warning-badge">⚠️ Recursive Horizon Dynamics</div>
+        <p>
+          Horizon <strong>+6h</strong> starts directly from observed history. Horizons <strong>+12h, +18h, and +24h</strong> recursively propagate the model’s predicted regional flash densities back into the lag graph; <strong>uncertainty compounds progressively with each forecast horizon</strong>. This demonstration candidate requires prospective operational validation.
+        </p>
+      </div>
+
+      <!-- Forecast Controls: Horizons, Layers, Run Action, Quick Cities -->
+      <div class="forecast-controls-panel">
+        <div class="controls-row">
+          <div class="control-group">
+            <span class="control-label">Forecast Horizon</span>
+            <div class="horizon-wrapper">
+              <div id="horizon-buttons" class="horizon-buttons"></div>
+              <button id="play-button" type="button" class="btn-secondary" title="Play 24-hour sequence animation">
+                <span id="play-icon">▶</span> <span id="play-text">Animate 24h</span>
+              </button>
+            </div>
           </div>
-          <div id="heatmap-legend" class="heatmap-legend" style="display: none;">
-            <span class="legend-scale-label">0%</span>
-            <div class="legend-bar"></div>
-            <span class="legend-scale-label" id="heatmap-max-label">50%+</span>
+
+          <div class="control-group">
+            <span class="control-label">Display Layer</span>
+            <div class="layer-buttons" id="layer-buttons">
+              <button type="button" class="layer-btn active" data-layer="warnings">Warning Alerts</button>
+              <button type="button" class="layer-btn" data-layer="heavy">Heavy Probability (Q99)</button>
+              <button type="button" class="layer-btn" data-layer="severe50">Severe 50km Risk</button>
+              <button type="button" class="layer-btn" data-layer="expected">Expected Flash Density</button>
+            </div>
+          </div>
+
+          <div class="control-group control-action">
+            <button id="run-button" type="button" class="btn-primary">⚡ Forecast today · next 24 h</button>
+          </div>
+        </div>
+
+        <!-- Quick City Jump Chips -->
+        <div class="quick-locations">
+          <span class="quick-label">📍 Quick Jump:</span>
+          <div class="chips-container" id="city-chips">
+            <button type="button" class="chip" data-lat="28.61" data-lon="77.20">New Delhi</button>
+            <button type="button" class="chip" data-lat="22.57" data-lon="88.36">Kolkata</button>
+            <button type="button" class="chip" data-lat="19.07" data-lon="72.87">Mumbai</button>
+            <button type="button" class="chip" data-lat="20.29" data-lon="85.82">Bhubaneswar</button>
+            <button type="button" class="chip" data-lat="21.14" data-lon="79.08">Nagpur</button>
+            <button type="button" class="chip" data-lat="17.38" data-lon="78.48">Hyderabad</button>
+            <button type="button" class="chip" data-lat="12.97" data-lon="77.59">Bengaluru</button>
+            <button type="button" class="chip" data-lat="26.14" data-lon="91.73">Guwahati</button>
+            <button type="button" class="chip" data-lat="25.59" data-lon="85.13">Patna</button>
+            <button type="button" class="chip" data-lat="26.84" data-lon="80.94">Lucknow</button>
+            <button type="button" class="chip" data-lat="26.91" data-lon="75.78">Jaipur</button>
+            <button type="button" class="chip" data-lat="23.34" data-lon="85.30">Ranchi</button>
+            <button type="button" class="chip" data-lat="21.25" data-lon="81.62">Raipur</button>
           </div>
         </div>
       </div>
 
-      <div class="map-workspace">
-        <!-- Interactive Canvas Map -->
-        <div class="map-wrap" id="map-wrap">
-          <canvas id="forecast-map" width="900" height="820" aria-label="India lightning warning map"></canvas>
-          <div id="map-empty" class="map-empty">Generate the forecast to display warning cells.</div>
-          
-          <!-- Floating Cursor Hover Tooltip -->
-          <div id="map-tooltip" class="map-tooltip" style="display: none;">
-            <div class="tooltip-header" id="tt-coord">20.25°N, 85.50°E</div>
-            <div class="tooltip-badge" id="tt-badge">Heavy Alert</div>
-            <div class="tooltip-value" id="tt-value">P(Heavy): 28.4%</div>
-          </div>
+      <!-- Horizon Summary Metrics Cards -->
+      <div class="summary-grid" aria-label="Selected horizon key metrics">
+        <article class="summary-card">
+          <span class="summary-label">Valid Time (IST)</span>
+          <strong id="valid-time">Not generated</strong>
+        </article>
+        <article class="summary-card">
+          <span class="summary-label">Strong or Heavy Alerts</span>
+          <strong id="strong-count">—</strong>
+        </article>
+        <article class="summary-card">
+          <span class="summary-label">Heavy Alerts (Q99)</span>
+          <strong id="heavy-count">—</strong>
+        </article>
+        <article class="summary-card">
+          <span class="summary-label">Peak Heavy Probability</span>
+          <strong id="peak-heavy">—</strong>
+        </article>
+      </div>
 
-          <!-- Bottom hint overlay -->
-          <div class="map-hint-bar">
-            <span>💡 Click any grid point on the map to inspect local probabilities & 24h trend</span>
+      <!-- Main Interactive Visual Panel: Canvas Map + Location Inspector -->
+      <div class="visual-panel">
+        <div class="panel-heading">
+          <div>
+            <p class="eyebrow" id="layer-label">Regional Warning Map</p>
+            <h3 id="map-title">Waiting for forecast execution…</h3>
+          </div>
+          <div class="legend" id="map-legend" aria-label="Storm class legend">
+            <div id="category-legend" class="category-legend">
+              <span><i class="none"></i>None</span>
+              <span><i class="mild"></i>Mild</span>
+              <span><i class="strong"></i>Strong</span>
+              <span><i class="heavy"></i>Heavy</span>
+            </div>
+            <div id="heatmap-legend" class="heatmap-legend" style="display: none;">
+              <span class="legend-scale-label">0%</span>
+              <div class="legend-bar"></div>
+              <span class="legend-scale-label" id="heatmap-max-label">50%+</span>
+            </div>
           </div>
         </div>
 
-        <!-- Location Probability Inspector Panel -->
-        <aside class="inspector-panel" id="inspector-panel">
-          <div class="inspector-header">
-            <h3>Location Inspector</h3>
-            <span class="pin-status" id="inspector-status">Click map to pin</span>
-          </div>
+        <div class="map-workspace">
+          <!-- Interactive Canvas Map -->
+          <div class="map-wrap" id="map-wrap">
+            <canvas id="forecast-map" width="900" height="820" aria-label="India lightning warning map"></canvas>
+            <div id="map-empty" class="map-empty">Click "Forecast today · next 24 h" to run the recursive model.</div>
 
-          <div id="inspector-placeholder" class="inspector-placeholder">
-            <div class="placeholder-icon">📍</div>
-            <p><strong>No location selected</strong></p>
-            <p class="subtext">Click on any region on the map or choose a quick city above to view calibrated probabilities, storm category, and 24-hour horizon evolution.</p>
-          </div>
-
-          <div id="inspector-content" class="inspector-content" style="display: none;">
-            <!-- Coordinates and Badge -->
-            <div class="location-title-box">
-              <div class="coord-display">
-                <span class="label-mini">Coordinates</span>
-                <strong id="insp-coord">21.25°N, 81.50°E</strong>
-                <span class="city-name" id="insp-city">Central India Region</span>
-              </div>
-              <div class="badge-display">
-                <span id="insp-badge" class="alert-badge heavy">Heavy Alert</span>
-              </div>
+            <!-- Floating Cursor Hover Tooltip -->
+            <div id="map-tooltip" class="map-tooltip" style="display: none;">
+              <div class="tooltip-header" id="tt-coord">20.25°N, 85.50°E</div>
+              <div class="tooltip-badge" id="tt-badge">Heavy Alert</div>
+              <div class="tooltip-value" id="tt-value">P(Heavy): 28.4%</div>
             </div>
 
-            <!-- Calibrated Probabilities Breakdown -->
-            <div class="probability-section">
-              <span class="section-title">Calibrated Storm Probabilities</span>
-              
-              <div class="prob-row">
-                <div class="prob-labels">
-                  <span class="prob-name"><i class="dot heavy"></i>Heavy Storm (Q99)</span>
-                  <strong class="prob-val" id="insp-p-heavy">24.5%</strong>
-                </div>
-                <div class="meter-bg"><div class="meter-bar heavy" id="bar-p-heavy" style="width: 24.5%;"></div></div>
-              </div>
-
-              <div class="prob-row">
-                <div class="prob-labels">
-                  <span class="prob-name"><i class="dot strong"></i>Strong Storm (Q95)</span>
-                  <strong class="prob-val" id="insp-p-strong">31.2%</strong>
-                </div>
-                <div class="meter-bg"><div class="meter-bar strong" id="bar-p-strong" style="width: 31.2%;"></div></div>
-              </div>
-
-              <div class="prob-row">
-                <div class="prob-labels">
-                  <span class="prob-name"><i class="dot mild"></i>Mild Activity</span>
-                  <strong class="prob-val" id="insp-p-mild">22.0%</strong>
-                </div>
-                <div class="meter-bg"><div class="meter-bar mild" id="bar-p-mild" style="width: 22.0%;"></div></div>
-              </div>
-
-              <div class="prob-row">
-                <div class="prob-labels">
-                  <span class="prob-name"><i class="dot none"></i>No Lightning</span>
-                  <strong class="prob-val" id="insp-p-none">22.3%</strong>
-                </div>
-                <div class="meter-bg"><div class="meter-bar none" id="bar-p-none" style="width: 22.3%;"></div></div>
-              </div>
-            </div>
-
-            <!-- Regional Metrics -->
-            <div class="metrics-grid">
-              <div class="metric-box">
-                <span class="metric-label">50km Severe Risk</span>
-                <strong class="metric-val" id="insp-p-q95-50">55.7%</strong>
-              </div>
-              <div class="metric-box">
-                <span class="metric-label">50km Expected Flashes</span>
-                <strong class="metric-val" id="insp-exp-count">38.4</strong>
-              </div>
-            </div>
-
-            <!-- 24-Hour Evolution at this point -->
-            <div class="timeline-section">
-              <span class="section-title">24-Hour Horizon Progression</span>
-              <div class="timeline-list" id="insp-timeline">
-                <!-- Populated by JS for +6h, +12h, +18h, +24h -->
-              </div>
+            <!-- Map bottom hint overlay -->
+            <div class="map-hint-bar">
+              <span>💡 Click any grid cell on the map or click a city above to inspect local probabilities and 24h trend</span>
             </div>
           </div>
-        </aside>
+
+          <!-- Location Probability Inspector Panel -->
+          <aside class="inspector-panel" id="inspector-panel">
+            <div class="inspector-header">
+              <h3>Location Inspector</h3>
+              <span class="pin-status" id="inspector-status">Click map to pin</span>
+            </div>
+
+            <div id="inspector-placeholder" class="inspector-placeholder">
+              <div class="placeholder-icon">📍</div>
+              <p><strong>No location selected</strong></p>
+              <p class="subtext">Click on any region on the map or choose a quick city above to view calibrated probabilities, storm category, and 24-hour horizon evolution.</p>
+            </div>
+
+            <div id="inspector-content" class="inspector-content" style="display: none;">
+              <div class="location-title-box">
+                <div class="coord-display">
+                  <span class="label-mini">Coordinates</span>
+                  <strong id="insp-coord">21.25°N, 81.50°E</strong>
+                  <span class="city-name" id="insp-city">Central India Region</span>
+                </div>
+                <div class="badge-display">
+                  <span id="insp-badge" class="alert-badge heavy">Heavy Alert</span>
+                </div>
+              </div>
+
+              <!-- Calibrated Probabilities Breakdown -->
+              <div class="probability-section">
+                <span class="section-title">Calibrated Storm Probabilities</span>
+                <div class="prob-row">
+                  <div class="prob-labels">
+                    <span class="prob-name"><i class="dot heavy"></i>Heavy Storm (Q99)</span>
+                    <strong class="prob-val" id="insp-p-heavy">24.5%</strong>
+                  </div>
+                  <div class="meter-bg"><div class="meter-bar heavy" id="bar-p-heavy" style="width: 24.5%;"></div></div>
+                </div>
+                <div class="prob-row">
+                  <div class="prob-labels">
+                    <span class="prob-name"><i class="dot strong"></i>Strong Storm (Q95)</span>
+                    <strong class="prob-val" id="insp-p-strong">31.2%</strong>
+                  </div>
+                  <div class="meter-bg"><div class="meter-bar strong" id="bar-p-strong" style="width: 31.2%;"></div></div>
+                </div>
+                <div class="prob-row">
+                  <div class="prob-labels">
+                    <span class="prob-name"><i class="dot mild"></i>Mild Activity</span>
+                    <strong class="prob-val" id="insp-p-mild">22.0%</strong>
+                  </div>
+                  <div class="meter-bg"><div class="meter-bar mild" id="bar-p-mild" style="width: 22.0%;"></div></div>
+                </div>
+                <div class="prob-row">
+                  <div class="prob-labels">
+                    <span class="prob-name"><i class="dot none"></i>No Lightning</span>
+                    <strong class="prob-val" id="insp-p-none">22.3%</strong>
+                  </div>
+                  <div class="meter-bg"><div class="meter-bar none" id="bar-p-none" style="width: 22.3%;"></div></div>
+                </div>
+              </div>
+
+              <!-- Regional 50km Metrics -->
+              <div class="metrics-grid">
+                <div class="metric-box">
+                  <span class="metric-label">50km Severe Risk</span>
+                  <strong class="metric-val" id="insp-p-q95-50">55.7%</strong>
+                </div>
+                <div class="metric-box">
+                  <span class="metric-label">50km Expected Flashes</span>
+                  <strong class="metric-val" id="insp-exp-count">38.4</strong>
+                </div>
+              </div>
+
+              <!-- 24-Hour Evolution at this pinned point -->
+              <div class="timeline-section">
+                <span class="section-title">24-Hour Horizon Progression</span>
+                <div class="timeline-list" id="insp-timeline"></div>
+              </div>
+            </div>
+          </aside>
+        </div>
       </div>
     </section>
 
-    <!-- Project Context Information -->
-    <section class="details-grid">
-      <article>
-        <h2>How to read this map</h2>
-        <p>Colours represent probability alarms frozen on the 2022 validation distribution. Cells reflect regional 0.25° risk areas, rather than isolated point strikes.</p>
-      </article>
-      <article>
-        <h2>Input Contract</h2>
-        <p>Today’s candidate consumes one complete 24-hour gridded lightning-history seed. The comparison player pairs frozen-model predictions with 2023 chronological-holdout observations.</p>
-      </article>
-      <article>
-        <h2>Recursive Model Dynamics</h2>
-        <p>Horizon +6h starts from the supplied lightning lags. The +12h, +18h, and +24h horizons feed predicted 50km regional flash density back into the lag graph.</p>
-      </article>
+    <!-- SECTION 4: Frozen Model Evidence & Scientific Benchmarks -->
+    <section class="section-card evidence-section" id="section-evidence" aria-label="Section 4: Frozen Model Evidence and Benchmarks">
+      <div class="section-header">
+        <div class="section-title-wrap">
+          <span class="section-tag">Section 4</span>
+          <h2>Frozen Model Evidence & Scientific Benchmarks</h2>
+          <p class="section-desc">
+            Exact empirical evaluation from the frozen deployment bundle (<code>evaluation_summary_2023.json</code>).
+            Rigorous chronological split: Training 2019–2021, Selection & Calibration 2022, Holdout Evaluation 2023 across 7,356,570 eligible predictions.
+          </p>
+        </div>
+      </div>
+
+      <!-- Key Headline Metrics Cards -->
+      <div class="evidence-grid">
+        <div class="evidence-card">
+          <span class="evidence-title">Chronological Split</span>
+          <strong>2019–2021 Train · 2022 Calib · 2023 Test</strong>
+          <span class="evidence-sub">Zero future target leakage; thresholds locked on 2022</span>
+        </div>
+        <div class="evidence-card">
+          <span class="evidence-title">Regional Mass Recovery</span>
+          <strong>68.11% (16.13M Pred / 23.68M Obs)</strong>
+          <span class="evidence-sub">MAE: 3.85 · RMSE: 29.66 · Poisson Dev: 11.37</span>
+        </div>
+        <div class="evidence-card">
+          <span class="evidence-title">Classification Accuracy</span>
+          <strong>90.41% Overall · Brier: 0.1378</strong>
+          <span class="evidence-sub">Calibrated isotonic ordinal thresholds</span>
+        </div>
+        <div class="evidence-card">
+          <span class="evidence-title">100 km Severe F1 Gain</span>
+          <strong>+49% vs 6-Hour Persistence</strong>
+          <span class="evidence-sub">F1: 0.598 (Model) vs 0.401 (Persistence)</span>
+        </div>
+      </div>
+
+      <!-- Spatial Skill Tolerance Table: Model vs Persistence -->
+      <div class="table-container">
+        <h3>Spatial Skill by Operational Tolerance (Holdout Year 2023)</h3>
+        <p class="table-caption">
+          Comparing the native 0.25° spatial model against a 6-hour persistence baseline across spatial tolerance radii.
+        </p>
+        <table class="benchmark-table">
+          <thead>
+            <tr>
+              <th>Storm Class</th>
+              <th>Spatial Tolerance</th>
+              <th>Model Precision</th>
+              <th>Model Recall</th>
+              <th>Model F1</th>
+              <th>Persistence F1</th>
+              <th>Relative F1 Gain</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td rowspan="3" class="class-label mild-cell">Mild or Greater</td>
+              <td>Exact Same Window (0 km)</td>
+              <td>19.3%</td>
+              <td>76.4%</td>
+              <td><strong>0.308</strong></td>
+              <td>0.247</td>
+              <td class="gain-positive">+24.7%</td>
+            </tr>
+            <tr>
+              <td>Within 50 km</td>
+              <td>45.6%</td>
+              <td>88.0%</td>
+              <td><strong>0.601</strong></td>
+              <td>0.507</td>
+              <td class="gain-positive">+18.5%</td>
+            </tr>
+            <tr>
+              <td>Within 100 km</td>
+              <td>69.2%</td>
+              <td>94.6%</td>
+              <td><strong>0.799</strong></td>
+              <td>0.716</td>
+              <td class="gain-positive">+11.6%</td>
+            </tr>
+
+            <tr class="table-divider">
+              <td rowspan="3" class="class-label strong-cell">Strong or Heavy (Q95+)</td>
+              <td>Exact Same Window (0 km)</td>
+              <td>6.2%</td>
+              <td>48.8%</td>
+              <td><strong>0.110</strong></td>
+              <td>0.072</td>
+              <td class="gain-positive">+52.8%</td>
+            </tr>
+            <tr>
+              <td>Within 50 km</td>
+              <td>22.8%</td>
+              <td>62.6%</td>
+              <td><strong>0.335</strong></td>
+              <td>0.209</td>
+              <td class="gain-positive">+60.3%</td>
+            </tr>
+            <tr>
+              <td>Within 100 km</td>
+              <td>50.0%</td>
+              <td>74.3%</td>
+              <td><strong>0.598</strong></td>
+              <td>0.401</td>
+              <td class="gain-positive highlight-gain">+49.1%</td>
+            </tr>
+
+            <tr class="table-divider">
+              <td rowspan="3" class="class-label heavy-cell">Heavy Storm (Q99+)</td>
+              <td>Exact Same Window (0 km)</td>
+              <td>3.1%</td>
+              <td>36.7%</td>
+              <td><strong>0.057</strong></td>
+              <td>0.035</td>
+              <td class="gain-positive">+62.9%</td>
+            </tr>
+            <tr>
+              <td>Within 50 km</td>
+              <td>13.4%</td>
+              <td>52.3%</td>
+              <td><strong>0.214</strong></td>
+              <td>0.131</td>
+              <td class="gain-positive">+63.4%</td>
+            </tr>
+            <tr>
+              <td>Within 100 km</td>
+              <td>33.7%</td>
+              <td>64.6%</td>
+              <td><strong>0.443</strong></td>
+              <td>0.284</td>
+              <td class="gain-positive highlight-gain">+56.0%</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Class-Specific Calibration & Discrimination Metrics Table -->
+      <div class="table-container">
+        <h3>Class Calibration & Discrimination Performance (2023 Holdout)</h3>
+        <table class="benchmark-table">
+          <thead>
+            <tr>
+              <th>Storm Category</th>
+              <th>50km Flash Threshold</th>
+              <th>Holdout Support</th>
+              <th>Prevalence</th>
+              <th>Precision</th>
+              <th>Recall</th>
+              <th>F1 Score</th>
+              <th>ROC-AUC</th>
+              <th>Brier Score</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><span class="category-badge none">None</span></td>
+              <td>0 flashes</td>
+              <td>6,601,464</td>
+              <td>89.74%</td>
+              <td>92.6%</td>
+              <td>97.9%</td>
+              <td>0.952</td>
+              <td>0.908</td>
+              <td>0.0637</td>
+            </tr>
+            <tr>
+              <td><span class="category-badge mild">Mild</span></td>
+              <td>1 to 31 flashes</td>
+              <td>679,117</td>
+              <td>9.23%</td>
+              <td>37.6%</td>
+              <td>66.1%</td>
+              <td>0.480</td>
+              <td>0.892</td>
+              <td>0.0645</td>
+            </tr>
+            <tr>
+              <td><span class="category-badge strong">Strong</span></td>
+              <td>32 to 91 flashes (Q95)</td>
+              <td>55,354</td>
+              <td>0.75%</td>
+              <td>14.3%</td>
+              <td>30.3%</td>
+              <td>0.194</td>
+              <td>0.930</td>
+              <td>0.0070</td>
+            </tr>
+            <tr>
+              <td><span class="category-badge heavy">Heavy</span></td>
+              <td>≥ 92 flashes (Q99)</td>
+              <td>20,635</td>
+              <td>0.28%</td>
+              <td>13.6%</td>
+              <td>28.5%</td>
+              <td>0.184</td>
+              <td>0.965</td>
+              <td>0.0026</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- SECTION 5: Scientific Limitations & Operational Disclaimers -->
+    <section class="section-card limitations-section" id="section-limitations" aria-label="Section 5: Scientific Limitations and Safety Notices">
+      <div class="section-header">
+        <div class="section-title-wrap">
+          <span class="section-tag">Section 5</span>
+          <h2>Scientific Limitations & Safety Disclaimers</h2>
+          <p class="section-desc">
+            Essential operational caveats, modeling boundaries, and safety constraints governing this research system.
+          </p>
+        </div>
+      </div>
+
+      <div class="limitations-grid">
+        <article class="limitation-card">
+          <div class="limitation-icon">🏛️</div>
+          <h3>Research Prototype Status</h3>
+          <p>
+            This system is an academic research demonstration, not an operational public meteorological alerting service. It must never be used as a standalone source for life-safety warnings, evacuations, or aviation planning. Official alerts from the India Meteorological Department (IMD) take legal and operational precedence.
+          </p>
+        </article>
+
+        <article class="limitation-card">
+          <div class="limitation-icon">📅</div>
+          <h3>No Prospective Post-2023 Test</h3>
+          <p>
+            The model was trained on 2019–2021, calibrated on 2022, and evaluated retrospectively on 2023. Because 2023 results have been inspected during research iterations, 2023 serves as development evidence. Rigorous prospective validation on live post-2023 data remains future work.
+          </p>
+        </article>
+
+        <article class="limitation-card">
+          <div class="limitation-icon">🎯</div>
+          <h3>Spatial Scale & Localization Limits</h3>
+          <p>
+            Exact 0.25° grid-cell localization of rare extreme convective cells remains challenging (exact-cell Heavy F1 is ~0.057). Practical operational skill exists within 50–100 km regional radii (F1 reaches 0.443–0.598), reflecting meso-scale thunderstorm cluster predictability.
+          </p>
+        </article>
+
+        <article class="limitation-card">
+          <div class="limitation-icon">🔄</div>
+          <h3>Overlapping Regional Mass vs Stroke Counts</h3>
+          <p>
+            The prediction target (<code>expected_region50_count</code>) measures overlapping 50 km regional convective severity. Summing this metric across grid cells yields regional mass, not a count of isolated lightning strikes across India. Comparing it against discrete stroke counts is scientifically invalid.
+          </p>
+        </article>
+
+        <article class="limitation-card">
+          <div class="limitation-icon">📈</div>
+          <h3>Recursive Uncertainty Compounding</h3>
+          <p>
+            The current 24-hour candidate recursively substitutes model-predicted regional flash densities into lag features at +12h, +18h, and +24h. Errors and biases compound with each horizon step. Early horizons (+6h) exhibit significantly higher reliability than later horizons (+24h).
+          </p>
+        </article>
+
+        <article class="limitation-card">
+          <div class="limitation-icon">📡</div>
+          <h3>Data Latency & Sensor Dependency</h3>
+          <p>
+            Real-time skill strictly depends on continuous, low-latency lightning sensor observations (WWLLN / satellite networks). In the absence of a live seed feed, forecasts operate in time-rebased demonstration mode and do not reflect current atmospheric conditions.
+          </p>
+        </article>
+      </div>
+
+      <!-- Recommended Final Verdict Callout -->
+      <blockquote class="verdict-banner">
+        <strong>Scientific Assessment Verdict:</strong>
+        <p>
+          "The system demonstrates useful six-hour regional lightning-risk localization, particularly when evaluated within operationally meaningful 50–100 km spatial tolerances. Exact-cell prediction and rare-event severity remain research limitations. The 2023 comparison is chronological development evidence, while the current +24-hour recursive product is a demonstration that requires a timely lightning-history feed and prospective validation before operational use."
+        </p>
+      </blockquote>
     </section>
   </main>
 
-  <footer>
-    India Lightning Minor Project · Workload Identity Protected · XGBoost 106-Feature Model
+  <footer class="app-footer">
+    <div class="footer-content">
+      <p><strong>India Lightning Minor Project</strong> · Google Workload Identity Protected · XGBoost 106-Feature Model</p>
+      <p class="footer-sub">Chronological holdout evaluation across 365 days of 2023 · Native 0.25° resolution ERA5 + WWLLN</p>
+    </div>
   </footer>
+
   <script src="/app.js" defer></script>
 </body>
 </html>

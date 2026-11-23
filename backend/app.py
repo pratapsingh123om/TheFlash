@@ -216,6 +216,31 @@ def health(request: Request = None):
 @app.get("/api/config")
 def config(request: Request = None):
     ensure_runtime(request)
+    latest = settings.output_dir / "latest_forecast.json"
+    latest_meta = None
+    if latest.exists():
+        try:
+            with latest.open("r", encoding="utf-8") as handle:
+                meta = json.load(handle)
+                latest_meta = {
+                    "generated_utc": meta.get("generated_utc"),
+                    "forecast_mode": meta.get("forecast_mode"),
+                    "forecast_kind": meta.get("forecast_kind"),
+                    "candidate": meta.get("candidate"),
+                    "lightning_history_seed": meta.get("lightning_history_seed"),
+                    "issue_time_ist": (
+                        meta.get("periods", [{}])[0].get("issue_time_ist")
+                        if meta.get("periods")
+                        else None
+                    ),
+                    "valid_time_ist": (
+                        meta.get("periods", [{}])[0].get("valid_time_ist")
+                        if meta.get("periods")
+                        else None
+                    ),
+                }
+        except Exception:
+            pass
     return {
         "forecast_horizons": settings.forecast_horizons,
         "recursive_mode": settings.recursive_mode,
@@ -234,8 +259,26 @@ def config(request: Request = None):
         ),
         "input_file": settings.input_parquet.name,
         "model": runtime.describe() if runtime else None,
+        "latest_forecast_meta": latest_meta,
         "warning": "Research demonstration only; not an operational public warning service.",
     }
+
+
+@app.get("/api/model/evidence")
+def model_evidence(request: Request = None):
+    ensure_runtime(request)
+    evidence_path = settings.model_dir / "evaluation_summary_2023.json"
+    if not evidence_path.is_file():
+        raise HTTPException(
+            status_code=404,
+            detail="Frozen evaluation summary is not available in the model directory.",
+        )
+    try:
+        return json.loads(evidence_path.read_text(encoding="utf-8"))
+    except Exception as exc:
+        raise HTTPException(
+            status_code=500, detail=f"Failed to read evaluation summary: {exc}"
+        ) from exc
 
 
 @app.post("/api/forecast/run")
