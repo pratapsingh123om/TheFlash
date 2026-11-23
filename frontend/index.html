@@ -11,7 +11,7 @@
 <body>
   <header class="topbar">
     <div>
-      <p class="eyebrow">Research demonstration</p>
+      <p class="eyebrow">Operational Research Demo</p>
       <h1>India Lightning Outlook</h1>
       <p class="subtitle">Four rolling six-hour regional forecasts from the frozen native 0.25° model</p>
     </div>
@@ -23,75 +23,223 @@
 
   <main>
     <section class="notice" aria-label="Model limitation">
-      <strong>Demo only.</strong>
-      The first interval uses supplied lightning history. Later intervals recursively use a regional-count proxy,
-      so uncertainty increases through the 24-hour sequence. Weather must be supplied independently for every horizon.
+      <strong>Research demonstration only.</strong>
+      The first 6-hour interval uses verified lightning history. Later intervals recursively feed regional proxy history,
+      reflecting expected storm propagation. Click anywhere on the map to inspect location-level calibrated probabilities.
     </section>
 
-    <section class="controls" aria-label="Forecast controls">
-      <div>
-        <span class="label">Forecast horizon</span>
-        <div id="horizon-buttons" class="horizon-buttons"></div>
+    <!-- Top Controls: Horizons, Sequence Player, View Layer, Action -->
+    <section class="controls-panel">
+      <div class="controls-row">
+        <div class="control-group">
+          <span class="label">Forecast Horizon</span>
+          <div class="horizon-wrapper">
+            <div id="horizon-buttons" class="horizon-buttons"></div>
+            <button id="play-button" type="button" class="btn-secondary" title="Play 24-hour sequence animation">
+              <span id="play-icon">▶</span> <span id="play-text">Animate</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="control-group">
+          <span class="label">Map Display Layer</span>
+          <div class="layer-buttons" id="layer-buttons">
+            <button type="button" class="layer-btn active" data-layer="warnings">Warning Alerts</button>
+            <button type="button" class="layer-btn" data-layer="heavy">Heavy Probability</button>
+            <button type="button" class="layer-btn" data-layer="severe50">Severe 50km Risk</button>
+            <button type="button" class="layer-btn" data-layer="expected">Expected Strikes</button>
+          </div>
+        </div>
+
+        <div class="control-group control-action">
+          <button id="run-button" type="button" class="btn-primary">Generate 24-hour forecast</button>
+        </div>
       </div>
-      <button id="run-button" type="button">Generate 24-hour forecast</button>
+
+      <!-- Quick Location Jump Chips -->
+      <div class="quick-locations">
+        <span class="quick-label">📍 Quick Inspect:</span>
+        <div class="chips-container" id="city-chips">
+          <button type="button" class="chip" data-lat="28.61" data-lon="77.20">New Delhi</button>
+          <button type="button" class="chip" data-lat="22.57" data-lon="88.36">Kolkata</button>
+          <button type="button" class="chip" data-lat="19.07" data-lon="72.87">Mumbai</button>
+          <button type="button" class="chip" data-lat="20.29" data-lon="85.82">Bhubaneswar</button>
+          <button type="button" class="chip" data-lat="21.14" data-lon="79.08">Nagpur</button>
+          <button type="button" class="chip" data-lat="17.38" data-lon="78.48">Hyderabad</button>
+          <button type="button" class="chip" data-lat="12.97" data-lon="77.59">Bengaluru</button>
+          <button type="button" class="chip" data-lat="26.14" data-lon="91.73">Guwahati</button>
+          <button type="button" class="chip" data-lat="25.59" data-lon="85.13">Patna</button>
+        </div>
+      </div>
     </section>
 
+    <!-- Key Regional Metrics Summary -->
     <section class="summary-grid" aria-label="Selected forecast summary">
       <article class="summary-card">
-        <span>Valid time IST</span>
+        <span>Valid Time (IST)</span>
         <strong id="valid-time">Not generated</strong>
       </article>
       <article class="summary-card">
-        <span>Strong or heavy alerts</span>
+        <span>Strong or Heavy Alerts</span>
         <strong id="strong-count">—</strong>
       </article>
       <article class="summary-card">
-        <span>Heavy alerts</span>
+        <span>Heavy Alerts (Q99)</span>
         <strong id="heavy-count">—</strong>
       </article>
       <article class="summary-card">
-        <span>Peak heavy probability</span>
+        <span>Peak Heavy Probability</span>
         <strong id="peak-heavy">—</strong>
       </article>
     </section>
 
+    <!-- Main Visual Panel: Map Canvas + Interactive Location Inspector -->
     <section class="visual-panel">
       <div class="panel-heading">
         <div>
-          <p class="eyebrow">Regional warning map</p>
+          <p class="eyebrow" id="layer-label">Regional warning map</p>
           <h2 id="map-title">Waiting for a forecast</h2>
         </div>
-        <div class="legend" aria-label="Storm class legend">
-          <span><i class="none"></i>None</span>
-          <span><i class="mild"></i>Mild</span>
-          <span><i class="strong"></i>Strong</span>
-          <span><i class="heavy"></i>Heavy</span>
+        <div class="legend" id="map-legend" aria-label="Storm class legend">
+          <div id="category-legend" class="category-legend">
+            <span><i class="none"></i>None</span>
+            <span><i class="mild"></i>Mild</span>
+            <span><i class="strong"></i>Strong</span>
+            <span><i class="heavy"></i>Heavy</span>
+          </div>
+          <div id="heatmap-legend" class="heatmap-legend" style="display: none;">
+            <span class="legend-scale-label">0%</span>
+            <div class="legend-bar"></div>
+            <span class="legend-scale-label" id="heatmap-max-label">50%+</span>
+          </div>
         </div>
       </div>
-      <div class="map-wrap">
-        <canvas id="forecast-map" width="900" height="820" aria-label="India lightning warning map"></canvas>
-        <div id="map-empty" class="map-empty">Generate the forecast to display warning cells.</div>
+
+      <div class="map-workspace">
+        <!-- Interactive Canvas Map -->
+        <div class="map-wrap" id="map-wrap">
+          <canvas id="forecast-map" width="900" height="820" aria-label="India lightning warning map"></canvas>
+          <div id="map-empty" class="map-empty">Generate the forecast to display warning cells.</div>
+          
+          <!-- Floating Cursor Hover Tooltip -->
+          <div id="map-tooltip" class="map-tooltip" style="display: none;">
+            <div class="tooltip-header" id="tt-coord">20.25°N, 85.50°E</div>
+            <div class="tooltip-badge" id="tt-badge">Heavy Alert</div>
+            <div class="tooltip-value" id="tt-value">P(Heavy): 28.4%</div>
+          </div>
+
+          <!-- Bottom hint overlay -->
+          <div class="map-hint-bar">
+            <span>💡 Click any grid point on the map to inspect local probabilities & 24h trend</span>
+          </div>
+        </div>
+
+        <!-- Location Probability Inspector Panel -->
+        <aside class="inspector-panel" id="inspector-panel">
+          <div class="inspector-header">
+            <h3>Location Inspector</h3>
+            <span class="pin-status" id="inspector-status">Click map to pin</span>
+          </div>
+
+          <div id="inspector-placeholder" class="inspector-placeholder">
+            <div class="placeholder-icon">📍</div>
+            <p><strong>No location selected</strong></p>
+            <p class="subtext">Click on any region on the map or choose a quick city above to view calibrated probabilities, storm category, and 24-hour horizon evolution.</p>
+          </div>
+
+          <div id="inspector-content" class="inspector-content" style="display: none;">
+            <!-- Coordinates and Badge -->
+            <div class="location-title-box">
+              <div class="coord-display">
+                <span class="label-mini">Coordinates</span>
+                <strong id="insp-coord">21.25°N, 81.50°E</strong>
+                <span class="city-name" id="insp-city">Central India Region</span>
+              </div>
+              <div class="badge-display">
+                <span id="insp-badge" class="alert-badge heavy">Heavy Alert</span>
+              </div>
+            </div>
+
+            <!-- Calibrated Probabilities Breakdown -->
+            <div class="probability-section">
+              <span class="section-title">Calibrated Storm Probabilities</span>
+              
+              <div class="prob-row">
+                <div class="prob-labels">
+                  <span class="prob-name"><i class="dot heavy"></i>Heavy Storm (Q99)</span>
+                  <strong class="prob-val" id="insp-p-heavy">24.5%</strong>
+                </div>
+                <div class="meter-bg"><div class="meter-bar heavy" id="bar-p-heavy" style="width: 24.5%;"></div></div>
+              </div>
+
+              <div class="prob-row">
+                <div class="prob-labels">
+                  <span class="prob-name"><i class="dot strong"></i>Strong Storm (Q95)</span>
+                  <strong class="prob-val" id="insp-p-strong">31.2%</strong>
+                </div>
+                <div class="meter-bg"><div class="meter-bar strong" id="bar-p-strong" style="width: 31.2%;"></div></div>
+              </div>
+
+              <div class="prob-row">
+                <div class="prob-labels">
+                  <span class="prob-name"><i class="dot mild"></i>Mild Activity</span>
+                  <strong class="prob-val" id="insp-p-mild">22.0%</strong>
+                </div>
+                <div class="meter-bg"><div class="meter-bar mild" id="bar-p-mild" style="width: 22.0%;"></div></div>
+              </div>
+
+              <div class="prob-row">
+                <div class="prob-labels">
+                  <span class="prob-name"><i class="dot none"></i>No Lightning</span>
+                  <strong class="prob-val" id="insp-p-none">22.3%</strong>
+                </div>
+                <div class="meter-bg"><div class="meter-bar none" id="bar-p-none" style="width: 22.3%;"></div></div>
+              </div>
+            </div>
+
+            <!-- Regional Metrics -->
+            <div class="metrics-grid">
+              <div class="metric-box">
+                <span class="metric-label">50km Severe Risk</span>
+                <strong class="metric-val" id="insp-p-q95-50">55.7%</strong>
+              </div>
+              <div class="metric-box">
+                <span class="metric-label">50km Expected Flashes</span>
+                <strong class="metric-val" id="insp-exp-count">38.4</strong>
+              </div>
+            </div>
+
+            <!-- 24-Hour Evolution at this point -->
+            <div class="timeline-section">
+              <span class="section-title">24-Hour Horizon Progression</span>
+              <div class="timeline-list" id="insp-timeline">
+                <!-- Populated by JS for +6h, +12h, +18h, +24h -->
+              </div>
+            </div>
+          </div>
+        </aside>
       </div>
     </section>
 
+    <!-- Project Context Information -->
     <section class="details-grid">
       <article>
         <h2>How to read this map</h2>
-        <p>Colours are based on probability thresholds frozen on the 2022 validation period. A coloured cell is a regional warning location, not a predicted individual strike point.</p>
+        <p>Colours represent probability alarms frozen on the 2022 validation distribution. Cells reflect regional 0.25° risk areas, rather than isolated point strikes.</p>
       </article>
       <article>
-        <h2>Input contract</h2>
-        <p>The backend expects four consecutive six-hour feature grids. Each must contain independently prepared weather predictors and the exact feature schema stored with the model.</p>
+        <h2>Input Contract</h2>
+        <p>The backend consumes 4 consecutive 6-hour feature snapshots from ERA5 weather reanalysis and calibrated ground lightning history.</p>
       </article>
       <article>
-        <h2>Recommended use</h2>
-        <p>Use the first six-hour interval as the primary result. The later intervals demonstrate recursive behaviour and should be communicated with increasing uncertainty.</p>
+        <h2>Recursive Model Dynamics</h2>
+        <p>Horizon 1 (+6h) uses observed history; horizons 2–4 use recursive 50km regional flash density estimates to project convective propagation across India.</p>
       </article>
     </section>
   </main>
 
   <footer>
-    India lightning minor project · Frozen model · No post-hoc test-year multiplier
+    India Lightning Minor Project · Workload Identity Protected · XGBoost 106-Feature Model
   </footer>
   <script src="/app.js" defer></script>
 </body>
