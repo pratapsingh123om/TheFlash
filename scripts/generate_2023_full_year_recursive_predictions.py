@@ -1,16 +1,12 @@
-"""Batch Recursive Prediction & Seasonal Evaluation Generator for 2023.
+"""Batch frozen +6-hour holdout prediction generator for 2023.
 
-This script executes the model's recursive forecasting loop across all 1,460
+This script executes frozen, independent +6-hour forecasts across all 1,460
 six-hour windows of test year 2023 (January 1 through December 31, 2023).
 
-For each multi-horizon sequence:
-1. Horizon 1 (+6h) uses initial lightning history lags from the panel.
-2. Subsequent horizons (Horizons 2, 3, 4) dynamically substitute the model's own
-   predicted expected strike density proxy into the lightning lag features,
-   combining it with that horizon's ERA5 convective weather predictors.
-3. Outputs are aggregated into monthly and seasonal national risk distributions,
-   and compared against the exact observed WWLLN strokes across India's 5,070
-   grid cells (0.25-degree resolution).
+Every 2023 six-hour window is predicted independently from information available
+at its own issue time. This reproduces the validated holdout protocol. Recursive
++12/+18/+24 forecasting is a separate live-demo product and must not be mixed
+into the retrospective 2023 comparison player.
 
 Run directly in Google Colab (with Google Drive mounted) or on any machine with
 access to the native 0.25-degree ERA5 physics panel partitions.
@@ -41,6 +37,7 @@ REQUIRED_MODEL_FILES = (
     "alarm_thresholds_selected_on_2022.json",
     "selection_frozen_before_2023.json",
     "training_complete.json",
+    "evaluation_summary_2023.json",
     "ordinal_any.json",
     "ordinal_q95.json",
     "ordinal_q99.json",
@@ -106,6 +103,30 @@ class IsotonicCalibrator:
 
     def predict(self, values: np.ndarray) -> np.ndarray:
         return np.clip(np.interp(values, self.x, self.y), 1e-8, 1.0 - 1e-8)
+
+
+def prediction_iteration_range(model: xgb.Booster) -> dict[str, tuple[int, int]]:
+    """Use the same early-stopping tree range as frozen model evaluation."""
+    best = model.attr("best_iteration")
+    return {"iteration_range": (0, int(best) + 1)} if best is not None else {}
+
+
+def predict_margin(model: xgb.Booster, matrix: xgb.DMatrix) -> np.ndarray:
+    return np.asarray(
+        model.predict(
+            matrix,
+            output_margin=True,
+            **prediction_iteration_range(model),
+        ),
+        dtype=np.float64,
+    )
+
+
+def predict_value(model: xgb.Booster, matrix: xgb.DMatrix) -> np.ndarray:
+    return np.asarray(
+        model.predict(matrix, **prediction_iteration_range(model)),
+        dtype=np.float64,
+    )
 
 
 def adjacency(latitudes: np.ndarray, longitudes: np.ndarray, radius_km: float) -> csr_matrix:
@@ -182,10 +203,24 @@ def run_monthly_recursive_predictions(
     recursive: bool = True,
     horizons_per_sequence: int = 4
 ) -> pl.DataFrame:
-    """Run recursive predictions on a single monthly panel file."""
+    """Run model predictions on a single monthly panel file.
+
+    ``recursive=False`` is the scientifically valid 2023 holdout mode: every
+    row retains the observed pre-issue lightning-history features stored in the
+    panel. Recursive replacement is retained only for legacy experiments and
+    must not be used to create the comparison archive.
+    """
     frame = pl.read_parquet(panel_path)
-    if "lightning_count" not in frame.columns:
-        raise RuntimeError(f"{panel_path.name} is missing the untouched lightning_count target")
+    required_columns = {
+        "lightning_count",
+        "target_region50_sum",
+        "forecast_row_eligible",
+    }
+    missing_columns = sorted(required_columns - set(frame.columns))
+    if missing_columns:
+        raise RuntimeError(
+            f"{panel_path.name} cannot reproduce frozen evaluation; missing {missing_columns}"
+        )
     valid_times = frame.select("forecast_valid_time_ist").unique().sort("forecast_valid_time_ist").to_series().to_list()
     
     feature_pos = {name: idx for idx, name in enumerate(features)}
@@ -226,23 +261,29 @@ def run_monthly_recursive_predictions(
                     if f_name in feature_pos:
                         x_vals[:, feature_pos[f_name]] = f_vals
 
-            dmat = xgb.DMatrix(x_vals, feature_names=features, missing=np.nan)
+            eligible = h_slice["forecast_row_eligible"].to_numpy() == 1
+            selected = np.flatnonzero(eligible)
+            if not selected.size:
+                continue
+            selected_x = x_vals[selected]
+            dmat = xgb.DMatrix(selected_x, feature_names=features, missing=np.nan)
             
             # Predict ordinal heads
-            ord_any = calibrators["any"].predict(np.asarray(models["ordinal_any"].predict(dmat, output_margin=True), dtype=np.float64))
-            ord_q95 = calibrators["q95"].predict(np.asarray(models["ordinal_q95"].predict(dmat, output_margin=True), dtype=np.float64))
-            ord_q99 = calibrators["q99"].predict(np.asarray(models["ordinal_q99"].predict(dmat, output_margin=True), dtype=np.float64))
+            ord_any = calibrators["any"].predict(predict_margin(models["ordinal_any"], dmat))
+            ord_q95 = calibrators["q95"].predict(predict_margin(models["ordinal_q95"], dmat))
+            ord_q99 = calibrators["q99"].predict(predict_margin(models["ordinal_q99"], dmat))
             
             probs = coherent_probabilities(ord_any, ord_q95, ord_q99)
             
             # Severity predictions
-            sev_mild = np.clip(np.expm1(models["severity_mild"].predict(dmat)), 0.0, None)
-            sev_strong = np.clip(np.expm1(models["severity_strong"].predict(dmat)), 0.0, None)
-            sev_heavy = np.clip(np.expm1(models["severity_heavy"].predict(dmat)), 0.0, None)
+            sev_mild = np.clip(np.expm1(predict_value(models["severity_mild"], dmat)), 0.0, None)
+            sev_strong = np.clip(np.expm1(predict_value(models["severity_strong"], dmat)), 0.0, None)
+            sev_heavy = np.clip(np.expm1(predict_value(models["severity_heavy"], dmat)), 0.0, None)
             
             expected_count = probs[:, 1] * sev_mild + probs[:, 2] * sev_strong + probs[:, 3] * sev_heavy
-            observed_local = h_slice["lightning_count"].to_numpy().astype(np.float32)
-            observed_region50 = sparse_sum(neighbor50, observed_local)
+            observed_region50 = (
+                h_slice["target_region50_sum"].to_numpy().astype(np.float32)[selected]
+            )
             
             # Alarms
             warning_code = np.zeros(len(expected_count), dtype=np.uint8)
@@ -250,26 +291,28 @@ def run_monthly_recursive_predictions(
                 warning_code[probs[:, idx] >= float(alarm_thresholds[cname])] = idx
                 
             # Accumulate predictions
-            for r in range(len(grid_ids)):
+            for prediction_row, grid_position in enumerate(selected):
                 output_rows.append({
                     "valid_time_ist": v_time,
-                    "horizon_hours": (h_idx + 1) * 6,
-                    "grid_id": int(grid_ids[r]),
-                    "grid_lat": round(float(lats[r]), 4),
-                    "grid_lon": round(float(lons[r]), 4),
-                    "p_none": round(float(probs[r, 0]), 5),
-                    "p_mild": round(float(probs[r, 1]), 5),
-                    "p_strong": round(float(probs[r, 2]), 5),
-                    "p_heavy": round(float(probs[r, 3]), 5),
-                    "p_strong_or_heavy_50km": round(float(ord_q95[r]), 5),
-                    "p_heavy_50km": round(float(ord_q99[r]), 5),
-                    "expected_region50_count": round(float(expected_count[r]), 3),
-                    "observed_region50_count": int(round(float(observed_region50[r]))),
-                    "warning_code": int(warning_code[r]),
+                    "horizon_hours": (h_idx + 1) * 6 if recursive else 6,
+                    "grid_id": int(grid_ids[grid_position]),
+                    "grid_lat": round(float(lats[grid_position]), 4),
+                    "grid_lon": round(float(lons[grid_position]), 4),
+                    "p_none": round(float(probs[prediction_row, 0]), 5),
+                    "p_mild": round(float(probs[prediction_row, 1]), 5),
+                    "p_strong": round(float(probs[prediction_row, 2]), 5),
+                    "p_heavy": round(float(probs[prediction_row, 3]), 5),
+                    "p_strong_or_heavy_50km": round(float(ord_q95[prediction_row]), 5),
+                    "p_heavy_50km": round(float(ord_q99[prediction_row]), 5),
+                    "expected_region50_count": round(float(expected_count[prediction_row]), 3),
+                    "observed_region50_count": int(round(float(observed_region50[prediction_row]))),
+                    "warning_code": int(warning_code[prediction_row]),
                 })
                 
             if recursive:
-                local_proxy = (expected_count / np.maximum(region_size, 1.0)).astype(np.float32)
+                expected_full = np.zeros(len(grid_ids), dtype=np.float32)
+                expected_full[selected] = expected_count.astype(np.float32)
+                local_proxy = (expected_full / np.maximum(region_size, 1.0)).astype(np.float32)
                 local_proxy = np.nan_to_num(local_proxy, nan=0.0, posinf=0.0, neginf=0.0)
                 lags = [local_proxy, lags[0], lags[1], lags[2]]
 
@@ -336,6 +379,11 @@ def append_month_to_comparison_archive(
         payload = {
             "date": date_value,
             "target": "daily sum of 50 km regional lightning counts",
+            "prediction_mode": "independent_6h_holdout_with_observed_history",
+            "aggregation_note": (
+                "Totals sum overlapping 50 km regional targets across grid cells; "
+                "they are not unique India-wide lightning-event totals."
+            ),
             "predicted_total": round(float(predicted.sum()), 2),
             "observed_total": int(round(float(observed.sum()))),
             "spatial_spearman": round(spatial_spearman, 4),
@@ -358,7 +406,9 @@ def append_month_to_comparison_archive(
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Generate full-year 2023 recursive lightning predictions.")
+    parser = argparse.ArgumentParser(
+        description="Generate the frozen independent +6-hour 2023 holdout archive."
+    )
     parser.add_argument(
         "--panel-dir",
         type=Path,
@@ -374,7 +424,7 @@ def main():
     parser.add_argument(
         "--output-dir",
         type=Path,
-        default=Path("2023_full_year_recursive_results"),
+        default=Path("2023_independent_6h_holdout_results"),
         help="Directory to save generated predictions and figures."
     )
     parser.add_argument(
@@ -386,8 +436,11 @@ def main():
     parser.add_argument(
         "--recursive",
         action="store_true",
-        default=True,
-        help="Enable multi-horizon recursive lag updates."
+        default=False,
+        help=(
+            "Deprecated for this holdout builder. The paired comparison archive "
+            "always uses independent +6-hour predictions with observed history."
+        ),
     )
     parser.add_argument(
         "--comparison-zip",
@@ -395,17 +448,19 @@ def main():
         default=None,
         help=(
             "Paired daily model-vs-observed archive for the web player. "
-            "Defaults to OUTPUT_DIR/india_lightning_2023_comparison_archive.zip."
+            "Defaults to OUTPUT_DIR/india_lightning_2023_comparison_archive_v2.zip."
         ),
     )
     args = parser.parse_args()
 
     mount_colab_drive()
     args.output_dir.mkdir(parents=True, exist_ok=True)
-    comparison_zip = args.comparison_zip or (
-        args.output_dir / "india_lightning_2023_comparison_archive.zip"
+    final_comparison_zip = args.comparison_zip or (
+        args.output_dir / "india_lightning_2023_comparison_archive_v2.zip"
     )
-    comparison_zip.parent.mkdir(parents=True, exist_ok=True)
+    final_comparison_zip.parent.mkdir(parents=True, exist_ok=True)
+    comparison_zip = final_comparison_zip.with_name(final_comparison_zip.name + ".tmp")
+    comparison_zip.unlink(missing_ok=True)
 
     # Locate model files
     model_dir = locate_model_directory(args.model_dir)
@@ -413,6 +468,7 @@ def main():
 
     print("Loading models and calibrators...")
     config = read_json(model_dir / "run_configuration.json")
+    frozen_evaluation = read_json(model_dir / "evaluation_summary_2023.json")
     features = list(config["features"])
     alarm_thresholds = read_json(model_dir / "alarm_thresholds_selected_on_2022.json")["thresholds"]
 
@@ -428,7 +484,17 @@ def main():
     }
 
     months = [int(m.strip()) for m in args.months.split(",")]
-    print(f"Processing 2023 months: {months} (Recursive mode = {args.recursive})")
+    if not months or any(month < 1 or month > 12 for month in months):
+        raise ValueError(f"Invalid --months value: {args.months}")
+    if len(months) != len(set(months)):
+        raise ValueError(f"Duplicate months are not allowed: {args.months}")
+    if args.recursive:
+        print(
+            "NOTE: --recursive is ignored. The 2023 comparison must reproduce the "
+            "validated independent +6-hour holdout protocol."
+        )
+    comparison_recursive = False
+    print(f"Processing 2023 months: {months} (Independent +6-hour holdout mode)")
 
     monthly_frames = []
     comparison_dates: list[str] = []
@@ -447,16 +513,24 @@ def main():
                     print(f"Warning: Panel partition for 2023-{month:02d} not found at {panel_file}, skipping.")
                     continue
 
-            print(f"\n--- Generating recursive predictions for 2023-{month:02d} ({SEASON_MAP[month]}) ---")
+            print(
+                f"\n--- Generating independent +6h predictions for "
+                f"2023-{month:02d} ({SEASON_MAP[month]}) ---"
+            )
             start_time = datetime.now()
             pred_df = run_monthly_recursive_predictions(
-                panel_file, models, calibrators, features, alarm_thresholds, recursive=args.recursive
+                panel_file,
+                models,
+                calibrators,
+                features,
+                alarm_thresholds,
+                recursive=comparison_recursive,
             )
             elapsed = (datetime.now() - start_time).total_seconds()
             print(f"Completed 2023-{month:02d} in {elapsed:.1f}s ({pred_df.height:,} prediction rows)")
 
             # Save monthly predictions and append paired daily maps.
-            out_file = args.output_dir / f"recursive_predictions_2023_{month:02d}.parquet"
+            out_file = args.output_dir / f"holdout_6h_predictions_2023_{month:02d}.parquet"
             pred_df.write_parquet(out_file, compression="zstd")
             append_month_to_comparison_archive(
                 comparison_archive, pred_df, comparison_dates, comparison_stats
@@ -474,13 +548,66 @@ def main():
             )
             del pred_df
 
+        annual_predicted = float(
+            sum(item["predicted_total"] for item in comparison_stats.values())
+        )
+        annual_observed = float(
+            sum(item["observed_total"] for item in comparison_stats.values())
+        )
+        annual_ratio = annual_predicted / max(annual_observed, 1.0)
+        reproduction_check: dict[str, Any] = {
+            "generated_predicted_sum": annual_predicted,
+            "generated_observed_sum": annual_observed,
+            "generated_predicted_to_observed_ratio": annual_ratio,
+            "full_year_verified_against_frozen_evaluation": False,
+        }
+
+        if set(months) == set(range(1, 13)):
+            if len(set(comparison_dates)) != 365:
+                raise RuntimeError(
+                    f"Full-year archive must contain 365 dates; found "
+                    f"{len(set(comparison_dates))}"
+                )
+            frozen_counts = frozen_evaluation["regional_count_metrics"]
+            frozen_predicted = float(frozen_counts["predicted_region50_count_sum"])
+            frozen_observed = float(frozen_counts["actual_region50_count_sum"])
+            predicted_relative_error = abs(annual_predicted - frozen_predicted) / max(
+                frozen_predicted, 1.0
+            )
+            observed_relative_error = abs(annual_observed - frozen_observed) / max(
+                frozen_observed, 1.0
+            )
+            reproduction_check.update(
+                {
+                    "frozen_predicted_sum": frozen_predicted,
+                    "frozen_observed_sum": frozen_observed,
+                    "predicted_relative_error": predicted_relative_error,
+                    "observed_relative_error": observed_relative_error,
+                    "tolerance": 0.005,
+                }
+            )
+            if predicted_relative_error > 0.005 or observed_relative_error > 0.005:
+                raise RuntimeError(
+                    "Generated 2023 archive does not reproduce the frozen model "
+                    "evaluation within 0.5%. Refusing to publish it. "
+                    f"prediction error={predicted_relative_error:.3%}, "
+                    f"observation error={observed_relative_error:.3%}."
+                )
+            reproduction_check["full_year_verified_against_frozen_evaluation"] = True
+
         manifest = {
-            "schema_version": 1,
+            "schema_version": 2,
             "year": 2023,
             "resolution_degrees": 0.25,
             "target": "daily sum of 50 km regional lightning counts",
             "selection": "model and thresholds selected on 2022; 2023 untouched holdout",
-            "recursive_horizons_hours": [6, 12, 18, 24],
+            "prediction_mode": "independent_6h_holdout_with_observed_history",
+            "forecast_horizon_hours": 6,
+            "aggregation_note": (
+                "predicted_total and observed_total sum overlapping 50 km regional "
+                "targets across cells and are not unique national event totals"
+            ),
+            "reproduction_check": reproduction_check,
             "dates": sorted(comparison_dates),
             "stats": comparison_stats,
         }
@@ -488,6 +615,8 @@ def main():
             "manifest.json", json.dumps(manifest, separators=(",", ":"))
         )
 
+    comparison_zip.replace(final_comparison_zip)
+    comparison_zip = final_comparison_zip
     print(f"Paired comparison archive: {comparison_zip}")
 
     if monthly_frames:

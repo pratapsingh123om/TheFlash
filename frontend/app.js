@@ -648,19 +648,30 @@ function drawComparisonCanvas(targetCanvas, cells, valueIndex, maximum) {
 }
 
 function renderComparison(data) {
-  drawComparisonCanvas(
-    document.getElementById("comparison-predicted-map"), data.cells, 3, data.predicted_max
+  // A shared scale is essential for an honest magnitude comparison. Separate
+  // maxima can make a severely underpredicted map look as intense as reality.
+  const sharedMaximum = Math.max(
+    Number(data.predicted_max) || 0,
+    Number(data.observed_max) || 0,
+    1
   );
   drawComparisonCanvas(
-    document.getElementById("comparison-observed-map"), data.cells, 4, data.observed_max
+    document.getElementById("comparison-predicted-map"), data.cells, 3, sharedMaximum
+  );
+  drawComparisonCanvas(
+    document.getElementById("comparison-observed-map"), data.cells, 4, sharedMaximum
   );
   document.getElementById("comparison-spearman").textContent = Number(data.spatial_spearman).toFixed(3);
   document.getElementById("comparison-overlap").textContent = `${(Number(data.top10_exact_overlap) * 100).toFixed(1)}%`;
+  const regionalMassRatio = Number(data.observed_total) > 0
+    ? Number(data.predicted_total) / Number(data.observed_total)
+    : 0;
+  document.getElementById("comparison-ratio").textContent = `${(regionalMassRatio * 100).toFixed(1)}%`;
   document.getElementById("comparison-predicted-total").textContent = Number(data.predicted_total).toLocaleString(undefined, {maximumFractionDigits: 0});
   document.getElementById("comparison-observed-total").textContent = Number(data.observed_total).toLocaleString();
   const status = document.getElementById("comparison-status");
   status.className = "comparison-status ready";
-  status.textContent = `${data.date} · paired untouched holdout · ${data.cells.length.toLocaleString()} cells`;
+  status.textContent = `${data.date} · independent +6h untouched holdout · shared color scale · ${data.cells.length.toLocaleString()} cells`;
 }
 
 async function loadComparisonDay(dateStr) {

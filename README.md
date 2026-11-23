@@ -192,23 +192,25 @@ Run the full-year generator in Colab after mounting Drive:
 python scripts/generate_2023_full_year_recursive_predictions.py \
   --panel-dir /content/drive/MyDrive/MINOR_PROJECT/0.25_spatial_models/india_lightning_era5_physics_0p25_forecast_panel \
   --model-dir /content/drive/MyDrive/MINOR_PROJECT/0.25_spatial_models/india_lightning_0p25_spatial_models \
-  --output-dir /content/drive/MyDrive/MINOR_PROJECT/0.25_spatial_models/2023_full_year_recursive_results
+  --output-dir /content/drive/MyDrive/MINOR_PROJECT/0.25_spatial_models/2023_independent_6h_holdout_results
 ```
 
 This produces:
 
 ```text
-india_lightning_2023_comparison_archive.zip
+india_lightning_2023_comparison_archive_v2.zip
 ```
 
-Each daily payload pairs the model's daily sum of recursive 50 km regional expected counts with the observed daily sum of 50 km regional lightning counts on the same 5,070-cell grid. The archive also stores daily spatial Spearman correlation and exact top-10% hotspot overlap.
+Each 2023 six-hour window is predicted independently using the observed lightning-history features available at its issue time, exactly matching the frozen +6-hour holdout protocol. The daily payload then pairs those predictions with observed targets on the same 5,070-cell grid. It does **not** feed predictions recursively through the 2023 test set; recursion is reserved for the separate live +12/+18/+24 demonstration.
+
+The displayed totals are sums of overlapping 50 km regional targets, not unique India-wide strike counts. The archive also stores daily spatial Spearman correlation and exact top-10% hotspot overlap. Both maps use one shared color scale so magnitude differences remain visible.
 
 Upload it without changing its filename:
 
 ```bash
 gcloud storage cp \
-  india_lightning_2023_comparison_archive.zip \
-  gs://nuclei-lenses/flash-model/india_lightning_2023_comparison_archive.zip
+  india_lightning_2023_comparison_archive_v2.zip \
+  gs://nuclei-lenses/flash-model/india_lightning_2023_comparison_archive_v2.zip
 ```
 
 The deployed dashboard then enables the side-by-side date slider and 2023 animation automatically. Model selection remains frozen on 2022; the archive generation performs inference and reporting only.

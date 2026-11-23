@@ -287,8 +287,9 @@ ARCHIVE_ZIP_URI = os.environ.get(
 archive_initialization_lock = threading.Lock()
 COMPARISON_ARCHIVE_URI = os.environ.get(
     "COMPARISON_ARCHIVE_URI",
-    "gs://nuclei-lenses/flash-model/india_lightning_2023_comparison_archive.zip",
+    "gs://nuclei-lenses/flash-model/india_lightning_2023_comparison_archive_v2.zip",
 )
+COMPARISON_ARCHIVE_FILENAME = "india_lightning_2023_comparison_archive_v2.zip"
 comparison_initialization_lock = threading.Lock()
 
 
@@ -323,10 +324,10 @@ def get_archive_path(oidc_token: str | None = None) -> Path:
 
 def get_comparison_archive_path(oidc_token: str | None = None) -> Path:
     local_candidates = [
-        settings.root_dir / "data" / "india_lightning_2023_comparison_archive.zip",
+        settings.root_dir / "data" / COMPARISON_ARCHIVE_FILENAME,
         Path(os.environ.get("ASSET_ROOT", "/tmp/india-lightning-assets")).resolve()
-        / "india_lightning_2023_comparison_archive.zip",
-        settings.output_dir / "india_lightning_2023_comparison_archive.zip",
+        / COMPARISON_ARCHIVE_FILENAME,
+        settings.output_dir / COMPARISON_ARCHIVE_FILENAME,
     ]
     for candidate in local_candidates:
         if candidate.is_file() and candidate.stat().st_size > 1000:
@@ -334,7 +335,7 @@ def get_comparison_archive_path(oidc_token: str | None = None) -> Path:
 
     target = (
         Path(os.environ.get("ASSET_ROOT", "/tmp/india-lightning-assets")).resolve()
-        / "india_lightning_2023_comparison_archive.zip"
+        / COMPARISON_ARCHIVE_FILENAME
     )
     with comparison_initialization_lock:
         if target.is_file() and target.stat().st_size > 1000:
@@ -407,8 +408,8 @@ def comparison_dates(request: Request = None):
         raise HTTPException(
             status_code=503,
             detail=(
-                "The paired 2023 model-vs-observed archive is not available yet. "
-                f"Expected {COMPARISON_ARCHIVE_URI}. {type(exc).__name__}: {exc}"
+                "The corrected paired 2023 holdout archive (v2) is not available yet. "
+                "Generate and upload the independent +6-hour archive, then retry."
             ),
         ) from exc
 
@@ -443,8 +444,8 @@ def comparison_day(date: str, request: Request = None):
         raise HTTPException(
             status_code=503,
             detail=(
-                "The paired 2023 model-vs-observed archive is not available yet. "
-                f"Expected {COMPARISON_ARCHIVE_URI}. {type(exc).__name__}: {exc}"
+                "The corrected paired 2023 holdout archive (v2) is not available yet. "
+                "Generate and upload the independent +6-hour archive, then retry."
             ),
         ) from exc
 

@@ -109,18 +109,19 @@
       <div class="comparison-metrics" aria-label="Daily comparison metrics">
         <span>Spatial Spearman <strong id="comparison-spearman">—</strong></span>
         <span>Top-10% overlap <strong id="comparison-overlap">—</strong></span>
-        <span>Predicted regional total <strong id="comparison-predicted-total">—</strong></span>
-        <span>Observed regional total <strong id="comparison-observed-total">—</strong></span>
+        <span>Regional-mass ratio <strong id="comparison-ratio">—</strong></span>
+        <span>Predicted overlapping regional mass <strong id="comparison-predicted-total">—</strong></span>
+        <span>Observed overlapping regional mass <strong id="comparison-observed-total">—</strong></span>
       </div>
       <div class="comparison-maps">
         <article class="comparison-map-card">
           <h3>Model forecast</h3>
-          <p>Daily sum of recursive 50 km regional expected counts</p>
+          <p>Independent +6h holdout forecasts summed by day (overlapping 50 km regions)</p>
           <canvas id="comparison-predicted-map" width="620" height="620" aria-label="Model-predicted 2023 lightning map"></canvas>
         </article>
         <article class="comparison-map-card">
           <h3>Observed reality</h3>
-          <p>Daily sum of observed 50 km regional lightning counts</p>
+          <p>Observed targets for the same windows and overlapping 50 km regions</p>
           <canvas id="comparison-observed-map" width="620" height="620" aria-label="Observed 2023 lightning map"></canvas>
         </article>
       </div>

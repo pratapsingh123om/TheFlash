@@ -57,6 +57,8 @@ def main() -> None:
         assert len(payload["cells"]) == 4
         assert payload["predicted_total"] > 0
         assert payload["observed_total"] > 0
+        assert payload["prediction_mode"] == "independent_6h_holdout_with_observed_history"
+        assert "not unique India-wide" in payload["aggregation_note"]
         assert 0 <= payload["top10_exact_overlap"] <= 1
         assert -1 <= payload["spatial_spearman"] <= 1
 
