@@ -1,0 +1,22 @@
+__pycache__/
+*.py[cod]
+*.log
+.env
+.venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Runtime assets are fetched from GCS and must not enter Git history.
+models/
+data/
+runtime/
+runtime-assets/
+*.parquet
+*.zip
+
+# Local editor and operating-system files.
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db

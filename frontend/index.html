@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Twenty-four-hour recursive India lightning forecast demonstration">
+  <title>India Lightning 24-Hour Demo</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <div>
+      <p class="eyebrow">Research demonstration</p>
+      <h1>India Lightning Outlook</h1>
+      <p class="subtitle">Four rolling six-hour regional forecasts from the frozen native 0.25° model</p>
+    </div>
+    <div class="status-wrap">
+      <span id="status-dot" class="status-dot"></span>
+      <span id="status-text">Checking model</span>
+    </div>
+  </header>
+
+  <main>
+    <section class="notice" aria-label="Model limitation">
+      <strong>Demo only.</strong>
+      The first interval uses supplied lightning history. Later intervals recursively use a regional-count proxy,
+      so uncertainty increases through the 24-hour sequence. Weather must be supplied independently for every horizon.
+    </section>
+
+    <section class="controls" aria-label="Forecast controls">
+      <div>
+        <span class="label">Forecast horizon</span>
+        <div id="horizon-buttons" class="horizon-buttons"></div>
+      </div>
+      <button id="run-button" type="button">Generate 24-hour forecast</button>
+    </section>
+
+    <section class="summary-grid" aria-label="Selected forecast summary">
+      <article class="summary-card">
+        <span>Valid time IST</span>
+        <strong id="valid-time">Not generated</strong>
+      </article>
+      <article class="summary-card">
+        <span>Strong or heavy alerts</span>
+        <strong id="strong-count">—</strong>
+      </article>
+      <article class="summary-card">
+        <span>Heavy alerts</span>
+        <strong id="heavy-count">—</strong>
+      </article>
+      <article class="summary-card">
+        <span>Peak heavy probability</span>
+        <strong id="peak-heavy">—</strong>
+      </article>
+    </section>
+
+    <section class="visual-panel">
+      <div class="panel-heading">
+        <div>
+          <p class="eyebrow">Regional warning map</p>
+          <h2 id="map-title">Waiting for a forecast</h2>
+        </div>
+        <div class="legend" aria-label="Storm class legend">
+          <span><i class="none"></i>None</span>
+          <span><i class="mild"></i>Mild</span>
+          <span><i class="strong"></i>Strong</span>
+          <span><i class="heavy"></i>Heavy</span>
+        </div>
+      </div>
+      <div class="map-wrap">
+        <canvas id="forecast-map" width="900" height="820" aria-label="India lightning warning map"></canvas>
+        <div id="map-empty" class="map-empty">Generate the forecast to display warning cells.</div>
+      </div>
+    </section>
+
+    <section class="details-grid">
+      <article>
+        <h2>How to read this map</h2>
+        <p>Colours are based on probability thresholds frozen on the 2022 validation period. A coloured cell is a regional warning location, not a predicted individual strike point.</p>
+      </article>
+      <article>
+        <h2>Input contract</h2>
+        <p>The backend expects four consecutive six-hour feature grids. Each must contain independently prepared weather predictors and the exact feature schema stored with the model.</p>
+      </article>
+      <article>
+        <h2>Recommended use</h2>
+        <p>Use the first six-hour interval as the primary result. The later intervals demonstrate recursive behaviour and should be communicated with increasing uncertainty.</p>
+      </article>
+    </section>
+  </main>
+
+  <footer>
+    India lightning minor project · Frozen model · No post-hoc test-year multiplier
+  </footer>
+  <script src="/app.js" defer></script>
+</body>
+</html>

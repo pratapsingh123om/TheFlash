@@ -1,0 +1,38 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v7
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install dependencies
+        run: python -m pip install --disable-pip-version-check -r requirements.txt
+
+      - name: Compile Python
+        run: python -m compileall -q backend tests
+
+      - name: Validate frontend JavaScript
+        run: node --check frontend/app.js
+
+      - name: Test verified asset bootstrap
+        run: python tests/bootstrap_test.py
+
+      - name: Test four-horizon inference and API
+        run: python tests/smoke_test.py
