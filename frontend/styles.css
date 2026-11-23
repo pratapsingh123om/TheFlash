@@ -75,6 +75,12 @@ main { width: min(1340px, calc(100% - 2.5rem)); margin: 1.5rem auto 4rem; }
   backdrop-filter: blur(8px);
 }
 
+#forecast-provenance { display: block; font-weight: 600; }
+#forecast-provenance.provenance-live { color: #91f5bd; }
+#forecast-provenance.provenance-stale { color: #ffe3a3; }
+#forecast-provenance.provenance-observed { color: #9de8ff; }
+#forecast-provenance.provenance-replay { color: #c6d3e3; }
+
 /* Controls Panel */
 .controls-panel {
   margin: 1.25rem 0;

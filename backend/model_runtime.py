@@ -5,9 +5,10 @@ import json
 import math
 import threading
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
+from zoneinfo import ZoneInfo
 
 import numpy as np
 import polars as pl
@@ -17,6 +18,8 @@ from scipy.spatial import cKDTree
 
 
 CLASS_NAMES = ("none", "mild", "strong", "heavy")
+IST = ZoneInfo("Asia/Kolkata")
+FORECAST_MODES = ("lightning_only_today", "full_features_replay")
 HISTORY_FEATURES = (
     "lightning_lag6h_count",
     "lightning_lag12h_count",
@@ -40,6 +43,13 @@ HISTORY_FEATURES = (
     "neighbor50_degree",
     "neighbor100_degree",
 )
+LIGHTNING_ONLY_STATIC_FEATURES = {
+    "grid_lat_center",
+    "grid_lon_center",
+    "elevation_m",
+    "elevation_imputation_code",
+    "elevation_source_distance_km",
+}
 REQUIRED_ARTIFACTS = (
     "run_configuration.json",
     "locked_storm_category_thresholds.json",
@@ -76,6 +86,30 @@ def iso_value(value: Any) -> str:
     if isinstance(value, np.datetime64):
         return np.datetime_as_string(value, unit="s")
     return str(value).replace(" ", "T")
+
+
+def floor_to_ist_six_hour(value: datetime | None = None) -> datetime:
+    current = value or datetime.now(IST)
+    if current.tzinfo is None:
+        current = current.replace(tzinfo=IST)
+    current = current.astimezone(IST)
+    return current.replace(hour=(current.hour // 6) * 6, minute=0, second=0, microsecond=0)
+
+
+def parse_datetime(value: Any) -> datetime | None:
+    if value is None:
+        return None
+    if isinstance(value, datetime):
+        parsed = value
+    else:
+        text = str(value).strip().replace("Z", "+00:00")
+        try:
+            parsed = datetime.fromisoformat(text)
+        except ValueError:
+            return None
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=IST)
+    return parsed.astimezone(IST)
 
 
 @dataclass(frozen=True)
@@ -258,6 +292,105 @@ class ModelRuntime:
         return [lag1, lag2, lag3, lag4]
 
     @staticmethod
+    def _seed_timestamp(frame: pl.DataFrame) -> Any:
+        for name in (
+            "observation_time_ist",
+            "history_end_time_ist",
+            "forecast_issue_time_ist",
+        ):
+            if name in frame.columns and frame.height:
+                values = frame.select(pl.col(name).drop_nulls().first()).item()
+                if values is not None:
+                    return values
+        return None
+
+    def _history_seed(
+        self, first: pl.DataFrame, history_path: Path | None
+    ) -> tuple[list[np.ndarray], dict[str, Any]]:
+        source_frame = first
+        source_kind = "bundled_replay_seed"
+        source_file = None
+        source_sha256 = None
+
+        if history_path is not None:
+            history_path = Path(history_path)
+            if not history_path.is_file():
+                raise FileNotFoundError(
+                    f"Configured lightning-history Parquet does not exist: {history_path}"
+                )
+            seed = pl.read_parquet(history_path)
+            required = {
+                "grid_id",
+                "lightning_lag6h_count",
+                "lightning_lag12h_count",
+                "lightning_lag24h_count",
+            }
+            missing = sorted(required - set(seed.columns))
+            if missing:
+                raise RuntimeError(
+                    f"Lightning-history Parquet is missing required columns: {missing}"
+                )
+            if "lightning_recent24h_sum" not in seed.columns:
+                if "lightning_lag18h_count" not in seed.columns:
+                    raise RuntimeError(
+                        "Lightning-history Parquet needs lightning_recent24h_sum or "
+                        "lightning_lag18h_count"
+                    )
+                seed = seed.with_columns(
+                    (
+                        pl.col("lightning_lag6h_count")
+                        + pl.col("lightning_lag12h_count")
+                        + pl.col("lightning_lag18h_count")
+                        + pl.col("lightning_lag24h_count")
+                    ).alias("lightning_recent24h_sum")
+                )
+            if seed["grid_id"].n_unique() != seed.height:
+                raise RuntimeError("Lightning-history Parquet contains duplicate grid_id rows")
+
+            seed_columns = [
+                "grid_id",
+                "lightning_lag6h_count",
+                "lightning_lag12h_count",
+                "lightning_lag24h_count",
+                "lightning_recent24h_sum",
+            ]
+            aligned = first.select("grid_id").join(
+                seed.select(seed_columns), on="grid_id", how="left", validate="1:1"
+            )
+            nulls = aligned.select(
+                pl.sum_horizontal(
+                    [pl.col(name).is_null().cast(pl.UInt8) for name in seed_columns[1:]]
+                ).sum()
+            ).item()
+            if nulls:
+                raise RuntimeError(
+                    f"Lightning-history Parquet does not cover every model cell ({nulls} missing values)"
+                )
+            source_frame = aligned
+            source_kind = "external_recent_lightning_history"
+            source_file = history_path.name
+            source_sha256 = file_sha256(history_path)
+
+            # Preserve a timestamp column separately; aligned only contains model inputs.
+            seed_time = self._seed_timestamp(seed)
+        else:
+            seed_time = self._seed_timestamp(first)
+
+        lags = self._history_state(source_frame)
+        return lags, {
+            "kind": source_kind,
+            "file": source_file,
+            "sha256": source_sha256,
+            "observation_time_ist": iso_value(seed_time) if seed_time is not None else None,
+        }
+
+    def _mask_to_lightning_only(self, x_values: np.ndarray) -> None:
+        allowed = set(HISTORY_FEATURES) | LIGHTNING_ONLY_STATIC_FEATURES
+        for name, position in self.feature_positions.items():
+            if name not in allowed:
+                x_values[:, position] = np.nan
+
+    @staticmethod
     def _history_values(
         lags: list[np.ndarray], neighbor50: csr_matrix, neighbor100: csr_matrix
     ) -> dict[str, np.ndarray]:
@@ -324,21 +457,43 @@ class ModelRuntime:
         return times[:horizons]
 
     def run_24h(
-        self, input_path: Path, recursive: bool = True, horizons: int = 4
+        self,
+        input_path: Path,
+        recursive: bool = True,
+        horizons: int = 4,
+        mode: str = "full_features_replay",
+        history_path: Path | None = None,
+        issue_time_ist: datetime | None = None,
     ) -> dict[str, Any]:
+        if mode not in FORECAST_MODES:
+            raise ValueError(f"Unknown forecast mode {mode!r}; expected one of {FORECAST_MODES}")
         input_path = Path(input_path)
         if not input_path.exists():
             raise FileNotFoundError(f"Forecast feature input not found: {input_path}")
         with self.lock:
             frame = pl.read_parquet(input_path)
-            times = self._validate_input(frame, horizons)
+            lightning_only = mode == "lightning_only_today"
+            times = self._validate_input(frame, 1 if lightning_only else horizons)
             frame = frame.filter(pl.col("forecast_valid_time_ist").is_in(times)).sort(
                 ["forecast_valid_time_ist", "grid_id"]
             )
-            slices = [
-                frame.filter(pl.col("forecast_valid_time_ist") == valid_time).sort("grid_id")
-                for valid_time in times
-            ]
+            if lightning_only:
+                first = frame.filter(
+                    pl.col("forecast_valid_time_ist") == times[0]
+                ).sort("grid_id")
+                slices = [first] * horizons
+                current_issue = floor_to_ist_six_hour(issue_time_ist)
+                issue_times = [
+                    current_issue + timedelta(hours=6 * index) for index in range(horizons)
+                ]
+                valid_times = [value + timedelta(hours=6) for value in issue_times]
+            else:
+                slices = [
+                    frame.filter(pl.col("forecast_valid_time_ist") == valid_time).sort("grid_id")
+                    for valid_time in times
+                ]
+                issue_times = [item["forecast_issue_time_ist"][0] for item in slices]
+                valid_times = [item["forecast_valid_time_ist"][0] for item in slices]
             grid_ids = slices[0]["grid_id"].to_numpy()
             latitudes = slices[0]["grid_lat_center"].to_numpy().astype(np.float64)
             longitudes = slices[0]["grid_lon_center"].to_numpy().astype(np.float64)
@@ -348,10 +503,35 @@ class ModelRuntime:
 
             neighbor50 = adjacency(latitudes, longitudes, 50.0)
             neighbor100 = adjacency(latitudes, longitudes, 100.0)
-            lags = self._history_state(slices[0])
+            if lightning_only:
+                lags, seed = self._history_seed(slices[0], history_path)
+            else:
+                lags = self._history_state(slices[0])
+                seed = {
+                    "kind": "features_supplied_for_each_replay_horizon",
+                    "file": input_path.name,
+                    "sha256": file_sha256(input_path),
+                    "observation_time_ist": iso_value(issue_times[0]),
+                }
+
+            seed_time = parse_datetime(seed.get("observation_time_ist"))
+            seed_age_hours = None
+            live_seed = False
+            if seed_time is not None:
+                comparison_time = parse_datetime(issue_times[0])
+                if comparison_time is not None:
+                    seed_age_hours = round(
+                        (comparison_time - seed_time).total_seconds() / 3600.0, 3
+                    )
+                    live_seed = -1.0 <= seed_age_hours <= 12.0
+            seed["age_hours_at_issue"] = seed_age_hours
+            seed["is_current"] = live_seed
+
             periods: list[dict[str, Any]] = []
             for horizon_index, item in enumerate(slices):
                 x_values = item.select(self.features).to_numpy().astype(np.float32, copy=False)
+                if lightning_only:
+                    self._mask_to_lightning_only(x_values)
                 if recursive:
                     history = self._history_values(lags, neighbor50, neighbor100)
                     for name, values in history.items():
@@ -389,8 +569,8 @@ class ModelRuntime:
                 periods.append(
                     {
                         "horizon_hours": (horizon_index + 1) * 6,
-                        "issue_time_ist": iso_value(item["forecast_issue_time_ist"][0]),
-                        "valid_time_ist": iso_value(item["forecast_valid_time_ist"][0]),
+                        "issue_time_ist": iso_value(issue_times[horizon_index]),
+                        "valid_time_ist": iso_value(valid_times[horizon_index]),
                         "warning_counts": warning_counts,
                         "max_strong_or_heavy_probability": round(
                             float(np.nanmax(prediction["ordinal_q95"])), 6
@@ -412,18 +592,40 @@ class ModelRuntime:
             payload = {
                 "status": "complete",
                 "generated_utc": datetime.now(timezone.utc).isoformat(),
+                "forecast_mode": mode,
+                "forecast_kind": (
+                    "current_lightning_history_candidate"
+                    if lightning_only
+                    else "retrospective_full_feature_replay"
+                ),
+                "candidate": lightning_only,
+                "weather_features_used": not lightning_only,
                 "input_file": input_path.name,
                 "input_sha256": file_sha256(input_path),
+                "lightning_history_seed": seed,
                 "recursive_mode": recursive,
                 "recursive_history_policy": (
                     "Expected 50 km regional count divided by region cell count is fed as a local-count "
-                    "proxy after the first horizon; weather is supplied independently for every horizon."
+                    + (
+                        "proxy after every horizon; all weather features are masked for the "
+                        "lightning-history-only candidate."
+                        if lightning_only
+                        else "proxy after the first horizon; weather is supplied independently for every horizon."
+                    )
                     if recursive
                     else "History features are read directly from every input horizon."
                 ),
                 "warning": (
-                    "This 24-hour recursion is a demonstration. The frozen model was trained for one "
-                    "six-hour step with observed lightning history, so uncertainty grows after horizon 1."
+                    (
+                        "Lightning-history-only research candidate. It is a current forecast only when "
+                        "lightning_history_seed.is_current is true; otherwise it is a time-rebased "
+                        "demonstration using the bundled historical seed. Weather predictors are masked."
+                    )
+                    if lightning_only
+                    else (
+                        "Retrospective replay using supplied historical weather and lightning features; "
+                        "this is not a forecast for today."
+                    )
                 ),
                 "model": self.describe(),
                 "periods": periods,

@@ -1,8 +1,8 @@
 # India Lightning 24-Hour Forecast Demo
 
-GitHub-ready backend and frontend for four rolling six-hour lightning-storm category forecasts over India. The application runs directly in Google Cloud Shell: source code comes from GitHub, while the frozen model and replay Parquet stay in the private Cloud Storage ZIP.
+GitHub-ready backend and frontend for four rolling six-hour lightning-storm category forecasts over India. It keeps retrospective 2023 observations separate from a current-time, lightning-history-only recursive candidate. Source code comes from GitHub, while the frozen model and seed Parquet stay in the private Cloud Storage ZIP.
 
-> **Research prototype:** this is not an operational public-warning service. The first six-hour interval is the strongest result. Horizons 2–4 recursively update lightning-history proxies, so uncertainty increases through the 24-hour demonstration.
+> **Research prototype:** this is not an operational public-warning service. A forecast is current only when the API reports `lightning_history_seed.is_current=true`. Horizons 2–4 recursively update lightning-history proxies, so uncertainty increases through the 24-hour demonstration.
 
 ## Proven deployment flow
 
@@ -74,15 +74,19 @@ The runtime packages are listed in both `pyproject.toml` and `requirements.txt`:
 
 The root `app.py` imports the application from `backend.app` and provides a safe diagnostic response if Vercel cannot import a native dependency. This keeps deployment failures visible at `/api/health` instead of returning only `FUNCTION_INVOCATION_FAILED`.
 
-Because the model ZIP is private, Vercel cannot use the Google credentials from Cloud Shell. Create a dedicated Google service account with only `roles/storage.objectViewer` access to `gs://nuclei-lenses`, then add its complete JSON key as an encrypted Vercel environment variable:
+Because the model ZIP is private, Vercel cannot use the Google credentials from Cloud Shell. The deployment uses Vercel OIDC, Google Workload Identity Federation, and short-lived service-account impersonation. It does not use a service-account JSON key. The complete setup is documented in [`ISSUE.md`](ISSUE.md).
 
 ```text
-GCP_SERVICE_ACCOUNT_JSON={...complete service-account JSON...}
+GCP_PROJECT_ID=data-mines
+GCP_PROJECT_NUMBER=YOUR_NUMERIC_PROJECT_NUMBER
+GCP_SERVICE_ACCOUNT_EMAIL=theflash-vercel@data-mines.iam.gserviceaccount.com
+GCP_WORKLOAD_IDENTITY_POOL_ID=vercel
+GCP_WORKLOAD_IDENTITY_POOL_PROVIDER_ID=vercel
 AUTO_BOOTSTRAP_ASSETS=1
 AUTO_RUN_FORECAST=0
 ```
 
-`MODEL_BUNDLE_URI` and `MODEL_BUNDLE_SHA256` already have the frozen defaults, although they may also be set explicitly in Vercel. Never put the service-account JSON in Git, `.env.example`, a frontend variable, or any variable prefixed with `NEXT_PUBLIC_`/`VITE_`.
+`MODEL_BUNDLE_URI` and `MODEL_BUNDLE_SHA256` already have frozen defaults. Never create or commit a service-account JSON key, and never expose the request-scoped OIDC token to the frontend.
 
 On a cold start, the FastAPI lifespan downloads the ZIP to Vercel's writable `/tmp` directory, verifies its SHA-256 and model contract, then loads the XGBoost artifacts. Warm function instances reuse that cache. The browser receives neither the credentials nor the bucket URL.
 
@@ -96,7 +100,7 @@ If Vercel reports that the Python function is too large because of NumPy, SciPy,
 VERCEL_SUPPORT_LARGE_FUNCTIONS=1
 ```
 
-The dashboard intentionally waits for the user to press **Generate 24-hour forecast** on Vercel rather than starting a background forecast during cold start.
+The dashboard intentionally waits for the user to press **Forecast today · next 24 h** on Vercel rather than starting inference during cold start.
 
 ## Run from Google Cloud Shell
 
@@ -150,7 +154,8 @@ python -m backend.bootstrap_assets \
 
 - `GET /api/health` — model, input, running forecast, and output readiness
 - `GET /api/config` — frozen model/configuration summary
-- `POST /api/forecast/run` — generate the four rolling six-hour horizons
+- `POST /api/forecast/run?mode=lightning_only_today` — current-time autoregressive lightning-history candidate
+- `POST /api/forecast/run?mode=full_features_replay` — frozen retrospective feature replay
 - `GET /api/forecast/latest` — return the latest map payload
 - `GET /api/boundary` — return the India boundary used by the dashboard
 
@@ -175,9 +180,34 @@ The tests use temporary synthetic XGBoost artifacts and a temporary ZIP. They ne
 
 The output contains four periods with per-cell latitude, longitude, category probabilities, warning code, and expected count. The dashboard draws those cells over the included India boundary and provides horizon selection and summary cards.
 
+## Supplying current lightning history
+
+Set either `LIGHTNING_HISTORY_PARQUET` to a local file or `LIGHTNING_HISTORY_URI` to a private GCS object containing one row per model `grid_id` and these columns:
+
+```text
+grid_id
+observation_time_ist
+lightning_lag6h_count
+lightning_lag12h_count
+lightning_lag18h_count
+lightning_lag24h_count
+```
+
+`lightning_recent24h_sum` may replace `lightning_lag18h_count`. Every model grid cell must appear exactly once. The backend rejects duplicate cells, incomplete spatial coverage, and missing lag values. A seed from no more than 12 hours before the issue boundary is marked current. Without this file, the app still demonstrates the recursive loop but clearly labels the bundled 2023 seed as stale.
+
+For Vercel, configure a non-secret URI such as:
+
+```text
+LIGHTNING_HISTORY_URI=gs://nuclei-lenses/flash-model/latest_lightning_history.parquet
+```
+
+The object is downloaded with the same request-scoped OIDC credentials as the model bundle. Update that object from the lightning-ingestion process before requesting the forecast; no bucket credential is exposed to the browser.
+
 ## Limitations to state in the demonstration
 
-- The included input is a frozen 2023 replay, not live observations or live forecast weather.
+- The bundled history seed is from 2023 and is not a live input.
+- `lightning_only_today` masks all learned weather predictors. It becomes a genuine current candidate only after supplying recent lightning history.
+- The lightning-only candidate is an ablation of the trained full-feature model, not a separately prospectively validated operational model.
 - The first interval uses supplied history; later intervals use recursively updated proxies.
 - The result is a regional storm-category probability map, not individual strike coordinates.
 - The model remains a retrospective research prototype and has not passed prospective operational validation.

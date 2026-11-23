@@ -112,6 +112,47 @@ def main() -> None:
         assert all(len(period["cells"]) == 5 for period in result["periods"])
         assert (output_dir / "latest_forecast.json").exists()
 
+        candidate_issue = datetime(2026, 11, 23, 12)
+        candidate = runtime.run_24h(
+            input_path,
+            recursive=True,
+            horizons=4,
+            mode="lightning_only_today",
+            issue_time_ist=candidate_issue,
+        )
+        assert candidate["forecast_mode"] == "lightning_only_today"
+        assert candidate["candidate"] is True
+        assert candidate["weather_features_used"] is False
+        assert candidate["periods"][0]["issue_time_ist"].startswith("2026-11-23T12:00:00")
+        assert candidate["periods"][3]["valid_time_ist"].startswith("2026-11-24T12:00:00")
+        assert candidate["lightning_history_seed"]["is_current"] is False
+
+        seed_rows = []
+        for grid_id in range(5):
+            seed_rows.append(
+                {
+                    "grid_id": grid_id,
+                    "observation_time_ist": candidate_issue,
+                    "lightning_lag6h_count": float(grid_id + 4),
+                    "lightning_lag12h_count": float(grid_id + 3),
+                    "lightning_lag18h_count": float(grid_id + 2),
+                    "lightning_lag24h_count": float(grid_id + 1),
+                }
+            )
+        history_path = root / "recent_lightning_history.parquet"
+        pl.DataFrame(seed_rows).write_parquet(history_path)
+        live_candidate = runtime.run_24h(
+            input_path,
+            recursive=True,
+            horizons=4,
+            mode="lightning_only_today",
+            history_path=history_path,
+            issue_time_ist=candidate_issue,
+        )
+        assert live_candidate["lightning_history_seed"]["kind"] == "external_recent_lightning_history"
+        assert live_candidate["lightning_history_seed"]["is_current"] is True
+        assert live_candidate["lightning_history_seed"]["sha256"]
+
         frontend = root / "frontend"
         frontend.mkdir()
         (frontend / "index.html").write_text("<h1>smoke</h1>", encoding="utf-8")
@@ -123,6 +164,7 @@ def main() -> None:
                 "OUTPUT_DIR": str(output_dir),
                 "AUTO_RUN_FORECAST": "0",
                 "FORECAST_HORIZONS": "4",
+                "DEFAULT_FORECAST_MODE": "lightning_only_today",
             }
         )
         from backend import app as api

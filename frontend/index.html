@@ -13,7 +13,7 @@
     <div>
       <p class="eyebrow">Operational Research Demo</p>
       <h1>India Lightning Outlook</h1>
-      <p class="subtitle">Four rolling six-hour regional forecasts from the frozen native 0.25° model</p>
+      <p class="subtitle">Today’s lightning-history candidate plus a separate 2023 observed archive</p>
     </div>
     <div class="status-wrap">
       <span id="status-dot" class="status-dot"></span>
@@ -24,8 +24,10 @@
   <main>
     <section class="notice" aria-label="Model limitation">
       <strong>Research demonstration only.</strong>
-      The first 6-hour interval uses verified lightning history. Later intervals recursively feed regional proxy history,
-      reflecting expected storm propagation. Click anywhere on the map to inspect location-level calibrated probabilities.
+      <span id="forecast-provenance">
+        Today’s candidate uses lightning history only. Later intervals recursively feed the model’s predicted regional
+        lightning state. A current forecast requires a recent history seed; stale fallback data is visibly identified.
+      </span>
     </section>
 
     <!-- Top Controls: Horizons, Sequence Player, View Layer, Action -->
@@ -52,7 +54,7 @@
         </div>
 
         <div class="control-group control-action">
-          <button id="run-button" type="button" class="btn-primary">Generate 24-hour forecast</button>
+          <button id="run-button" type="button" class="btn-primary">Forecast today · next 24 h</button>
         </div>
       </div>
 
@@ -78,8 +80,8 @@
       <div class="archive-top">
         <div class="archive-badge-wrap">
           <span class="badge badge-pulse">2023 Archive</span>
-          <strong>All-India Daily Lightning Replay</strong>
-          <span class="archive-hint">Explore any day of 2023 on demand from the cloud zip archive</span>
+          <strong>Observed Reality — All-India Daily Lightning</strong>
+          <span class="archive-hint">Historical observations are kept separate from today’s recursive candidate</span>
         </div>
         <div class="archive-presets">
           <span class="presets-label">⚡ Key Days:</span>

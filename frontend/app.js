@@ -19,6 +19,7 @@ const runButton = document.getElementById("run-button");
 const playButton = document.getElementById("play-button");
 const tooltip = document.getElementById("map-tooltip");
 const mapWrap = document.getElementById("map-wrap");
+const provenance = document.getElementById("forecast-provenance");
 
 // Major reference cities for location context
 const majorCities = [
@@ -411,8 +412,36 @@ function toggleAnimation() {
   }
 }
 
+function updateForecastProvenance(payload) {
+  if (!provenance) return;
+  provenance.className = "";
+
+  if (payload.archive_mode || payload.forecast_kind === "observed_2023_archive") {
+    provenance.classList.add("provenance-observed");
+    provenance.textContent = "Observed 2023 lightning — historical reality, not a forecast.";
+    return;
+  }
+
+  if (payload.forecast_mode === "lightning_only_today") {
+    const seed = payload.lightning_history_seed || {};
+    const seedTime = seed.observation_time_ist ? formatTime(seed.observation_time_ist) : "unknown";
+    if (seed.is_current) {
+      provenance.classList.add("provenance-live");
+      provenance.textContent = `Today’s lightning-only recursive candidate. Recent history seed: ${seedTime}. Weather inputs are excluded.`;
+    } else {
+      provenance.classList.add("provenance-stale");
+      provenance.textContent = `Time-rebased candidate only — the available lightning seed (${seedTime}) is not current. Add LIGHTNING_HISTORY_PARQUET for a genuine today forecast.`;
+    }
+    return;
+  }
+
+  provenance.classList.add("provenance-replay");
+  provenance.textContent = "Retrospective model replay using historical features — not a forecast for today.";
+}
+
 function renderForecast(payload) {
   state.forecast = payload;
+  updateForecastProvenance(payload);
   const emptyEl = document.getElementById("map-empty");
   if (emptyEl) {
     emptyEl.classList.add("hidden");
@@ -549,14 +578,18 @@ runButton.addEventListener("click", async () => {
   runButton.textContent = "Generating forecast...";
   setStatus("", "Forecast running");
   try {
-    const payload = await getJson("/api/forecast/run", { method: "POST" });
+    const payload = await getJson("/api/forecast/run?mode=lightning_only_today", { method: "POST" });
     renderForecast(payload);
-    setStatus("ready", "Forecast complete");
+    const isCurrent = Boolean(payload.lightning_history_seed?.is_current);
+    setStatus(
+      isCurrent ? "ready" : "",
+      isCurrent ? "Current candidate complete" : "Candidate complete · history seed is stale"
+    );
   } catch (error) {
     setStatus("error", error.message);
   } finally {
     runButton.disabled = false;
-    runButton.textContent = "Generate 24-hour forecast";
+    runButton.textContent = "Forecast today · next 24 h";
   }
 });
 
@@ -585,6 +618,8 @@ function formatArchiveDayAsForecast(archiveData) {
   return {
     status: "complete",
     archive_mode: true,
+    forecast_kind: "observed_2023_archive",
+    candidate: false,
     date: archiveData.date,
     periods: [
       {

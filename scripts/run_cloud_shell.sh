@@ -80,6 +80,9 @@ echo "Starting backend and same-origin frontend..."
     OUTPUT_DIR="$OUTPUT_DIR" \
     RECURSIVE_MODE=1 \
     FORECAST_HORIZONS=4 \
+    DEFAULT_FORECAST_MODE="${DEFAULT_FORECAST_MODE:-lightning_only_today}" \
+    LIGHTNING_HISTORY_PARQUET="${LIGHTNING_HISTORY_PARQUET:-}" \
+    LIGHTNING_HISTORY_URI="${LIGHTNING_HISTORY_URI:-}" \
     AUTO_RUN_FORECAST=1 \
     HOST="$HOST" \
     PORT="$PORT" \

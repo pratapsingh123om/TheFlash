@@ -13,6 +13,7 @@ from typing import TYPE_CHECKING
 from fastapi import FastAPI, HTTPException, Request, Response
 from fastapi.responses import FileResponse, HTMLResponse
 from fastapi.staticfiles import StaticFiles
+from starlette.middleware.gzip import GZipMiddleware
 
 from .bootstrap_assets import (
     DEFAULT_BUNDLE_SHA256,
@@ -31,6 +32,7 @@ runtime: "ModelRuntime | None" = None
 runtime_error: str | None = None
 forecast_lock = threading.Lock()
 runtime_initialization_lock = threading.Lock()
+lightning_history_download_lock = threading.Lock()
 
 
 def extract_jwt_claims(token: str | None) -> dict:
@@ -108,6 +110,33 @@ def ensure_runtime(request: Request | None = None) -> None:
             runtime_error = f"AssetBootstrapError: {type(exc).__name__}: {exc}{sub_info}"
 
 
+def resolve_lightning_history(request: Request | None = None) -> Path | None:
+    if settings.lightning_history_parquet is not None:
+        if not settings.lightning_history_parquet.is_file():
+            raise FileNotFoundError(
+                "LIGHTNING_HISTORY_PARQUET does not exist: "
+                f"{settings.lightning_history_parquet}"
+            )
+        return settings.lightning_history_parquet
+
+    if not settings.lightning_history_uri:
+        return None
+
+    oidc_token = request.headers.get("x-vercel-oidc-token") if request else None
+    if not oidc_token:
+        oidc_token = os.environ.get("VERCEL_OIDC_TOKEN")
+    target = settings.output_dir / "latest_lightning_history.parquet"
+    temporary = target.with_suffix(".parquet.tmp")
+    with lightning_history_download_lock:
+        target.parent.mkdir(parents=True, exist_ok=True)
+        try:
+            download_bundle(settings.lightning_history_uri, temporary, oidc_token=oidc_token)
+            temporary.replace(target)
+        finally:
+            temporary.unlink(missing_ok=True)
+    return target
+
+
 def generate_forecast() -> bool:
     global runtime_error
     if runtime is None:
@@ -115,10 +144,17 @@ def generate_forecast() -> bool:
     if not forecast_lock.acquire(blocking=False):
         return False
     try:
+        history_path = (
+            resolve_lightning_history()
+            if settings.default_forecast_mode == "lightning_only_today"
+            else None
+        )
         runtime.run_24h(
             settings.input_parquet,
             recursive=settings.recursive_mode,
             horizons=settings.forecast_horizons,
+            mode=settings.default_forecast_mode,
+            history_path=history_path,
         )
         runtime_error = None
         return True
@@ -151,6 +187,7 @@ app = FastAPI(
     version="1.1.0",
     lifespan=lifespan,
 )
+app.add_middleware(GZipMiddleware, minimum_size=1024, compresslevel=6)
 
 
 @app.get("/api/health")
@@ -164,6 +201,14 @@ def health(request: Request = None):
         "forecast_exists": latest.exists(),
         "forecast_running": forecast_lock.locked(),
         "recursive_mode": settings.recursive_mode,
+        "default_forecast_mode": settings.default_forecast_mode,
+        "external_lightning_history_configured": bool(
+            settings.lightning_history_uri
+            or (
+                settings.lightning_history_parquet
+                and settings.lightning_history_parquet.is_file()
+            )
+        ),
         "error": runtime_error,
     }
 
@@ -174,6 +219,19 @@ def config(request: Request = None):
     return {
         "forecast_horizons": settings.forecast_horizons,
         "recursive_mode": settings.recursive_mode,
+        "default_forecast_mode": settings.default_forecast_mode,
+        "supported_forecast_modes": [
+            "lightning_only_today",
+            "full_features_replay",
+        ],
+        "external_lightning_history_file": (
+            settings.lightning_history_parquet.name
+            if settings.lightning_history_parquet
+            else None
+        ),
+        "external_lightning_history_uri_configured": bool(
+            settings.lightning_history_uri
+        ),
         "input_file": settings.input_parquet.name,
         "model": runtime.describe() if runtime else None,
         "warning": "Research demonstration only; not an operational public warning service.",
@@ -181,17 +239,32 @@ def config(request: Request = None):
 
 
 @app.post("/api/forecast/run")
-def run_forecast(request: Request = None):
+def run_forecast(request: Request = None, mode: str | None = None):
     ensure_runtime(request)
     if runtime is None:
         raise HTTPException(status_code=503, detail=runtime_error or "Model is not loaded")
+    selected_mode = (mode or settings.default_forecast_mode).strip().lower()
+    if selected_mode not in {"lightning_only_today", "full_features_replay"}:
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                "mode must be lightning_only_today or full_features_replay"
+            ),
+        )
     if not forecast_lock.acquire(blocking=False):
         raise HTTPException(status_code=409, detail="A forecast is already running")
     try:
+        history_path = (
+            resolve_lightning_history(request)
+            if selected_mode == "lightning_only_today"
+            else None
+        )
         return runtime.run_24h(
             settings.input_parquet,
             recursive=settings.recursive_mode,
             horizons=settings.forecast_horizons,
+            mode=selected_mode,
+            history_path=history_path,
         )
     except Exception as exc:
         raise HTTPException(status_code=500, detail=f"{type(exc).__name__}: {exc}") from exc
