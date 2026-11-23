@@ -63,8 +63,10 @@ The repository declares the custom FastAPI entrypoint in `pyproject.toml`:
 
 ```toml
 [tool.vercel]
-entrypoint = "backend.app:app"
+entrypoint = "app:app"
 ```
+
+The root `app.py` imports the application from `backend.app` and provides a safe diagnostic response if Vercel cannot import a native dependency. This keeps deployment failures visible at `/api/health` instead of returning only `FUNCTION_INVOCATION_FAILED`.
 
 Because the model ZIP is private, Vercel cannot use the Google credentials from Cloud Shell. Create a dedicated Google service account with only `roles/storage.objectViewer` access to `gs://nuclei-lenses`, then add its complete JSON key as an encrypted Vercel environment variable:
 
