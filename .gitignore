@@ -10,11 +10,13 @@ __pycache__/
 
 # Runtime assets are fetched from GCS and must not enter Git history.
 models/
-data/
+data/*
+!data/india_lightning_2023_daily_archive.zip
 runtime/
 runtime-assets/
 *.parquet
 *.zip
+!data/india_lightning_2023_daily_archive.zip
 service-account*.json
 gcp-key*.json
 
