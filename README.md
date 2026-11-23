@@ -57,6 +57,35 @@ git push -u origin main
 
 GitHub Actions tests the complete synthetic inference path on every push and pull request. It does not need access to the private production ZIP.
 
+## Deploy on Vercel
+
+The repository declares the custom FastAPI entrypoint in `pyproject.toml`:
+
+```toml
+[tool.vercel]
+entrypoint = "backend.app:app"
+```
+
+Because the model ZIP is private, Vercel cannot use the Google credentials from Cloud Shell. Create a dedicated Google service account with only `roles/storage.objectViewer` access to `gs://nuclei-lenses`, then add its complete JSON key as an encrypted Vercel environment variable:
+
+```text
+GCP_SERVICE_ACCOUNT_JSON={...complete service-account JSON...}
+AUTO_BOOTSTRAP_ASSETS=1
+AUTO_RUN_FORECAST=0
+```
+
+`MODEL_BUNDLE_URI` and `MODEL_BUNDLE_SHA256` already have the frozen defaults, although they may also be set explicitly in Vercel. Never put the service-account JSON in Git, `.env.example`, a frontend variable, or any variable prefixed with `NEXT_PUBLIC_`/`VITE_`.
+
+On a cold start, the FastAPI lifespan downloads the ZIP to Vercel's writable `/tmp` directory, verifies its SHA-256 and model contract, then loads the XGBoost artifacts. Warm function instances reuse that cache. The browser receives neither the credentials nor the bucket URL.
+
+If Vercel reports that the Python function is too large because of NumPy, SciPy, Polars, and XGBoost, add this project environment variable and redeploy:
+
+```text
+VERCEL_SUPPORT_LARGE_FUNCTIONS=1
+```
+
+The dashboard intentionally waits for the user to press **Generate 24-hour forecast** on Vercel rather than starting a background forecast during cold start.
+
 ## Run from Google Cloud Shell
 
 ```bash

@@ -66,7 +66,24 @@ def download_bundle(uri: str, destination: Path) -> None:
             ) from exc
         if not parsed.netloc or not parsed.path.lstrip("/"):
             raise ValueError(f"Invalid Google Cloud Storage URI: {uri}")
-        client = storage.Client()
+        service_account_json = os.environ.get("GCP_SERVICE_ACCOUNT_JSON", "").strip()
+        if service_account_json:
+            try:
+                from google.oauth2 import service_account
+
+                service_account_info = json.loads(service_account_json)
+                credentials = service_account.Credentials.from_service_account_info(
+                    service_account_info,
+                    scopes=["https://www.googleapis.com/auth/devstorage.read_only"],
+                )
+                client = storage.Client(
+                    project=service_account_info.get("project_id"),
+                    credentials=credentials,
+                )
+            except (json.JSONDecodeError, KeyError, ValueError) as exc:
+                raise RuntimeError("GCP_SERVICE_ACCOUNT_JSON is not valid service-account JSON") from exc
+        else:
+            client = storage.Client()
         blob = client.bucket(parsed.netloc).blob(parsed.path.lstrip("/"))
         blob.download_to_filename(str(destination))
         return

@@ -1,22 +1,48 @@
 from __future__ import annotations
 
 import json
+import os
 import threading
 from contextlib import asynccontextmanager
+from dataclasses import replace
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
+from .bootstrap_assets import (
+    DEFAULT_BUNDLE_SHA256,
+    DEFAULT_BUNDLE_URI,
+    bootstrap_assets,
+)
 from .model_runtime import ModelRuntime
-from .settings import Settings
+from .settings import Settings, env_bool
 
 
 settings = Settings.from_env()
 runtime: ModelRuntime | None = None
 runtime_error: str | None = None
 forecast_lock = threading.Lock()
+
+
+def prepare_runtime_assets() -> None:
+    global settings
+    if settings.model_dir.is_dir() and settings.input_parquet.is_file():
+        return
+    auto_bootstrap = env_bool("AUTO_BOOTSTRAP_ASSETS", env_bool("VERCEL", False))
+    if not auto_bootstrap:
+        return
+    result = bootstrap_assets(
+        os.environ.get("MODEL_BUNDLE_URI", DEFAULT_BUNDLE_URI),
+        os.environ.get("MODEL_BUNDLE_SHA256", DEFAULT_BUNDLE_SHA256),
+        Path(os.environ.get("ASSET_ROOT", "/tmp/india-lightning-assets")),
+    )
+    settings = replace(
+        settings,
+        model_dir=Path(str(result["model_dir"])).resolve(),
+        input_parquet=Path(str(result["input_parquet"])).resolve(),
+    )
 
 
 def initialize_runtime() -> None:
@@ -52,7 +78,12 @@ def generate_forecast() -> bool:
 
 @asynccontextmanager
 async def lifespan(_: FastAPI):
-    initialize_runtime()
+    global runtime_error
+    try:
+        prepare_runtime_assets()
+        initialize_runtime()
+    except Exception as exc:
+        runtime_error = f"AssetBootstrapError: {type(exc).__name__}: {exc}"
     if settings.auto_run_forecast and runtime is not None and settings.input_parquet.exists():
         worker = threading.Thread(target=generate_forecast, daemon=True)
         worker.start()

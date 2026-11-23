@@ -28,16 +28,18 @@ class Settings:
     @classmethod
     def from_env(cls) -> "Settings":
         root = Path(os.environ.get("APP_ROOT", Path(__file__).resolve().parents[1])).resolve()
+        vercel = env_bool("VERCEL", False)
+        default_output = Path("/tmp/india-lightning-output") if vercel else root / "runtime"
         return cls(
             root_dir=root,
             model_dir=Path(os.environ.get("MODEL_DIR", root / "models")).resolve(),
             input_parquet=Path(
                 os.environ.get("INPUT_PARQUET", root / "data" / "next_24h_features.parquet")
             ).resolve(),
-            output_dir=Path(os.environ.get("OUTPUT_DIR", root / "runtime")).resolve(),
+            output_dir=Path(os.environ.get("OUTPUT_DIR", default_output)).resolve(),
             static_dir=(root / "frontend").resolve(),
             recursive_mode=env_bool("RECURSIVE_MODE", True),
-            auto_run_forecast=env_bool("AUTO_RUN_FORECAST", True),
+            auto_run_forecast=env_bool("AUTO_RUN_FORECAST", not vercel),
             forecast_horizons=max(1, min(4, int(os.environ.get("FORECAST_HORIZONS", "4")))),
             host=os.environ.get("HOST", "0.0.0.0"),
             port=int(os.environ.get("PORT", "8080")),

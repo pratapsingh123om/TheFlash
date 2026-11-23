@@ -14,6 +14,8 @@ runtime/
 runtime-assets/
 *.parquet
 *.zip
+service-account*.json
+gcp-key*.json
 
 # Local editor and operating-system files.
 .idea/
