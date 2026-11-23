@@ -62,9 +62,15 @@ GitHub Actions tests the complete synthetic inference path on every push and pul
 The repository declares the custom FastAPI entrypoint in `pyproject.toml`:
 
 ```toml
+[project]
+requires-python = ">=3.12,<3.13"
+dependencies = ["fastapi==0.115.12", "...other locked runtime packages..."]
+
 [tool.vercel]
 entrypoint = "app:app"
 ```
+
+The runtime packages are listed in both `pyproject.toml` and `requirements.txt`: Vercel installs from the project metadata, while the Cloud Shell launcher installs from `requirements.txt`.
 
 The root `app.py` imports the application from `backend.app` and provides a safe diagnostic response if Vercel cannot import a native dependency. This keeps deployment failures visible at `/api/health` instead of returning only `FUNCTION_INVOCATION_FAILED`.
 

@@ -19,7 +19,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v7
         with:
-          python-version: "3.11"
+          python-version: "3.12"
           cache: pip
 
       - name: Install dependencies
@@ -27,6 +27,9 @@ jobs:
 
       - name: Compile Python
         run: python -m compileall -q backend tests
+
+      - name: Check dependency manifests
+        run: python tests/dependency_manifest_test.py
 
       - name: Validate frontend JavaScript
         run: node --check frontend/app.js
