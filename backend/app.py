@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import base64
 import json
 import os
 import threading
@@ -28,6 +29,19 @@ runtime: "ModelRuntime | None" = None
 runtime_error: str | None = None
 forecast_lock = threading.Lock()
 runtime_initialization_lock = threading.Lock()
+
+
+def extract_jwt_claims(token: str | None) -> dict:
+    if not token:
+        return {}
+    try:
+        parts = token.split(".")
+        if len(parts) >= 2:
+            padded = parts[1] + "=" * (-len(parts[1]) % 4)
+            return json.loads(base64.urlsafe_b64decode(padded).decode("utf-8"))
+    except Exception:
+        pass
+    return {}
 
 
 def prepare_runtime_assets(oidc_token: str | None = None) -> None:
@@ -87,7 +101,9 @@ def ensure_runtime(request: Request | None = None) -> None:
             initialize_runtime()
         except Exception as exc:
             runtime = None
-            runtime_error = f"AssetBootstrapError: {type(exc).__name__}: {exc}"
+            claims = extract_jwt_claims(oidc_token)
+            sub_info = f" [OIDC sub: {claims.get('sub')}]" if claims.get("sub") else ""
+            runtime_error = f"AssetBootstrapError: {type(exc).__name__}: {exc}{sub_info}"
 
 
 def generate_forecast() -> bool:
