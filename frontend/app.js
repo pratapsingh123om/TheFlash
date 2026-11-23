@@ -671,7 +671,7 @@ function renderComparison(data) {
   document.getElementById("comparison-observed-total").textContent = Number(data.observed_total).toLocaleString();
   const status = document.getElementById("comparison-status");
   status.className = "comparison-status ready";
-  status.textContent = `${data.date} · independent +6h untouched holdout · shared color scale · ${data.cells.length.toLocaleString()} cells`;
+  status.textContent = `${data.date} · independent +6h chronological holdout · shared color scale · ${data.cells.length.toLocaleString()} cells`;
 }
 
 async function loadComparisonDay(dateStr) {

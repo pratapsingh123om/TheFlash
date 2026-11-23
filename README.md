@@ -157,7 +157,7 @@ python -m backend.bootstrap_assets \
 - `POST /api/forecast/run?mode=lightning_only_today` — current-time autoregressive lightning-history candidate
 - `POST /api/forecast/run?mode=full_features_replay` — frozen retrospective feature replay
 - `GET /api/forecast/latest` — return the latest map payload
-- `GET /api/comparison/dates` — list paired untouched 2023 holdout dates
+- `GET /api/comparison/dates` — list paired 2023 chronological-holdout dates
 - `GET /api/comparison/day?date=2023-07-21` — paired model and observed spatial maps
 - `GET /api/boundary` — return the India boundary used by the dashboard
 
@@ -184,7 +184,7 @@ The output contains four periods with per-cell latitude, longitude, category pro
 
 ## Building the full 2023 comparison player
 
-The small repository archive contains observed daily lightning only. A valid paired player must be generated from the frozen model and untouched 2023 panel; the browser must not invent model predictions from the observations.
+The small repository archive contains observed daily lightning only. A valid paired player must be generated from the frozen model and 2023 chronological-holdout panel; the browser must not invent model predictions from the observations. Because 2023 outcomes have since been inspected, these results are development evidence rather than a still-untouched final test.
 
 Run the full-year generator in Colab after mounting Drive:
 

@@ -600,7 +600,10 @@ def main():
             "year": 2023,
             "resolution_degrees": 0.25,
             "target": "daily sum of 50 km regional lightning counts",
-            "selection": "model and thresholds selected on 2022; 2023 untouched holdout",
+            "selection": (
+                "model and thresholds selected on 2022; 2023 chronological holdout "
+                "now treated as development evidence after inspection"
+            ),
             "prediction_mode": "independent_6h_holdout_with_observed_history",
             "forecast_horizon_hours": 6,
             "aggregation_note": (
