@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 
 
 try:
@@ -18,7 +18,7 @@ except Exception as exc:
         }
 
     @app.get("/api/health")
-    def startup_health():
+    def startup_health(request: Request = None):
         return {
             "status": "startup_failed",
             "model_loaded": False,

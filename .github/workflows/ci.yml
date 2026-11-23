@@ -37,5 +37,8 @@ jobs:
       - name: Test verified asset bootstrap
         run: python tests/bootstrap_test.py
 
+      - name: Test keyless Vercel OIDC authentication
+        run: python tests/oidc_auth_test.py
+
       - name: Test four-horizon inference and API
         run: python tests/smoke_test.py

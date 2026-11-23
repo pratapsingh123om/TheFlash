@@ -392,9 +392,9 @@ on `gs://nuclei-lenses`.
 - [ ] Provider audience matches the Vercel team audience.
 - [ ] Exact production subject can impersonate `theflash-vercel`.
 - [ ] Service account has read-only access to `gs://nuclei-lenses`.
-- [ ] No `GCP_SERVICE_ACCOUNT_JSON` secret exists in Vercel or Git.
-- [ ] Backend reads `x-vercel-oidc-token` only from the incoming request.
+- [x] No `GCP_SERVICE_ACCOUNT_JSON` secret exists in Vercel or Git.
+- [x] Backend reads `x-vercel-oidc-token` only from the incoming request.
 - [ ] `/api/health` reports `status=ready` and `model_loaded=true`.
 - [ ] `/api/forecast/run` returns all four six-hour horizons.
 - [ ] Frontend renders the returned forecast map.
-- [ ] Cloud Shell deployment remains functional with Application Default Credentials.
+- [x] Cloud Shell deployment remains functional with Application Default Credentials.

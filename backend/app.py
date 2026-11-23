@@ -8,7 +8,7 @@ from dataclasses import replace
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import FileResponse, HTMLResponse
 from fastapi.staticfiles import StaticFiles
 
@@ -27,9 +27,10 @@ settings = Settings.from_env()
 runtime: "ModelRuntime | None" = None
 runtime_error: str | None = None
 forecast_lock = threading.Lock()
+runtime_initialization_lock = threading.Lock()
 
 
-def prepare_runtime_assets() -> None:
+def prepare_runtime_assets(oidc_token: str | None = None) -> None:
     global settings
     if settings.model_dir.is_dir() and settings.input_parquet.is_file():
         return
@@ -40,6 +41,7 @@ def prepare_runtime_assets() -> None:
         os.environ.get("MODEL_BUNDLE_URI", DEFAULT_BUNDLE_URI),
         os.environ.get("MODEL_BUNDLE_SHA256", DEFAULT_BUNDLE_SHA256),
         Path(os.environ.get("ASSET_ROOT", "/tmp/india-lightning-assets")),
+        oidc_token=oidc_token,
     )
     settings = replace(
         settings,
@@ -58,6 +60,34 @@ def initialize_runtime() -> None:
     except Exception as exc:  # Keep the UI alive so configuration errors are visible.
         runtime = None
         runtime_error = f"{type(exc).__name__}: {exc}"
+
+
+def ensure_runtime(request: Request | None = None) -> None:
+    global runtime, runtime_error
+    if runtime is not None:
+        return
+
+    with runtime_initialization_lock:
+        if runtime is not None:
+            return
+
+        oidc_token = None
+        if request is not None:
+            oidc_token = request.headers.get("x-vercel-oidc-token")
+        if not oidc_token:
+            oidc_token = os.environ.get("VERCEL_OIDC_TOKEN")
+
+        is_vercel = env_bool("VERCEL", False)
+        if is_vercel and not oidc_token:
+            runtime_error = "AssetBootstrapError: RuntimeError: Vercel OIDC header is missing"
+            return
+
+        try:
+            prepare_runtime_assets(oidc_token=oidc_token)
+            initialize_runtime()
+        except Exception as exc:
+            runtime = None
+            runtime_error = f"AssetBootstrapError: {type(exc).__name__}: {exc}"
 
 
 def generate_forecast() -> bool:
@@ -84,14 +114,17 @@ def generate_forecast() -> bool:
 @asynccontextmanager
 async def lifespan(_: FastAPI):
     global runtime_error
-    try:
-        prepare_runtime_assets()
-        initialize_runtime()
-    except Exception as exc:
-        runtime_error = f"AssetBootstrapError: {type(exc).__name__}: {exc}"
-    if settings.auto_run_forecast and runtime is not None and settings.input_parquet.exists():
-        worker = threading.Thread(target=generate_forecast, daemon=True)
-        worker.start()
+    # In Vercel serverless functions, authentication tokens are request-scoped.
+    # Initialization is deferred to ensure_runtime(request) on incoming requests.
+    if not env_bool("VERCEL", False):
+        try:
+            prepare_runtime_assets()
+            initialize_runtime()
+        except Exception as exc:
+            runtime_error = f"AssetBootstrapError: {type(exc).__name__}: {exc}"
+        if settings.auto_run_forecast and runtime is not None and settings.input_parquet.exists():
+            worker = threading.Thread(target=generate_forecast, daemon=True)
+            worker.start()
     yield
 
 
@@ -103,7 +136,8 @@ app = FastAPI(
 
 
 @app.get("/api/health")
-def health():
+def health(request: Request = None):
+    ensure_runtime(request)
     latest = settings.output_dir / "latest_forecast.json"
     return {
         "status": "ready" if runtime is not None and runtime_error is None else "attention_required",
@@ -117,7 +151,8 @@ def health():
 
 
 @app.get("/api/config")
-def config():
+def config(request: Request = None):
+    ensure_runtime(request)
     return {
         "forecast_horizons": settings.forecast_horizons,
         "recursive_mode": settings.recursive_mode,
@@ -128,7 +163,8 @@ def config():
 
 
 @app.post("/api/forecast/run")
-def run_forecast():
+def run_forecast(request: Request = None):
+    ensure_runtime(request)
     if runtime is None:
         raise HTTPException(status_code=503, detail=runtime_error or "Model is not loaded")
     if not forecast_lock.acquire(blocking=False):
