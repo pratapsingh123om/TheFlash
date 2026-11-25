@@ -387,6 +387,10 @@ def get_archive_path(oidc_token: str | None = None) -> Path:
 
 def get_comparison_archive_path(oidc_token: str | None = None) -> Path:
     local_candidates = [
+        # A newly built all-in-one bucket bundle stores the paired archive beside
+        # next_24h_features.parquet.  This lets one immutable asset ZIP provide
+        # both inference inputs and the 2023 comparison player.
+        settings.input_parquet.parent / COMPARISON_ARCHIVE_FILENAME,
         settings.root_dir / "data" / COMPARISON_ARCHIVE_FILENAME,
         Path(os.environ.get("ASSET_ROOT", "/tmp/india-lightning-assets")).resolve()
         / COMPARISON_ARCHIVE_FILENAME,
