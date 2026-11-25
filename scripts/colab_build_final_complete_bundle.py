@@ -215,6 +215,15 @@ def validate_model_and_panel() -> tuple[dict[str, Any], dict[int, Path], dict[st
         config.get("posthoc_multiplier") is False,
         "Model configuration uses a forbidden post-hoc multiplier",
     )
+    require(
+        read_json(MODEL_DIR / "training_complete.json").get("status") == "complete",
+        "training_complete.json does not mark this run complete",
+    )
+    require(
+        read_json(MODEL_DIR / "selection_frozen_before_2023.json").get("status")
+        == "frozen",
+        "selection_frozen_before_2023.json does not mark selection frozen",
+    )
 
     thresholds = read_json(MODEL_DIR / "alarm_thresholds_selected_on_2022.json").get(
         "thresholds", {}
@@ -503,9 +512,14 @@ def validate_final_zip(path: Path, comparison_sha: str) -> dict[str, Any]:
             prefix + "bundle_manifest.json",
         }
         require(required.issubset(names), f"Final ZIP is missing: {sorted(required - names)}")
-        embedded = archive.read(prefix + "data/india_lightning_2023_comparison_archive_v2.zip")
+        embedded_digest = hashlib.sha256()
+        with archive.open(
+            prefix + "data/india_lightning_2023_comparison_archive_v2.zip", "r"
+        ) as embedded:
+            for block in iter(lambda: embedded.read(8 * 1024 * 1024), b""):
+                embedded_digest.update(block)
         require(
-            hashlib.sha256(embedded).hexdigest() == comparison_sha,
+            embedded_digest.hexdigest() == comparison_sha,
             "Embedded comparison archive checksum changed during packaging",
         )
     return {
