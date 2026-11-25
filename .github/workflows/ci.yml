@@ -48,3 +48,6 @@ jobs:
 
       - name: Test paired 2023 comparison archive
         run: python tests/comparison_archive_test.py
+
+      - name: Test safe comparison error classification
+        run: python tests/comparison_error_test.py

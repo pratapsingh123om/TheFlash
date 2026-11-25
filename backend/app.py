@@ -336,6 +336,26 @@ COMPARISON_ARCHIVE_FILENAME = "india_lightning_2023_comparison_archive_v2.zip"
 comparison_initialization_lock = threading.Lock()
 
 
+def classify_comparison_archive_error(exc: Exception) -> str:
+    """Return a credential-safe reason for comparison archive failures."""
+    error_type = type(exc).__name__.lower()
+    message = str(exc).lower()
+    combined = f"{error_type} {message}"
+    if isinstance(exc, zipfile.BadZipFile) or "bad zip" in combined:
+        return "invalid_zip"
+    if isinstance(exc, KeyError) and "manifest.json" in combined:
+        return "manifest_missing"
+    if "notfound" in error_type or "no such object" in combined or "404" in message:
+        return "object_not_found"
+    if "forbidden" in error_type or "permission" in combined or "403" in message:
+        return "permission_denied"
+    if isinstance(exc, TimeoutError) or "timeout" in combined:
+        return "download_timeout"
+    if "no space left" in combined or "enospc" in combined:
+        return "temporary_storage_exhausted"
+    return "retrieval_or_validation_failed"
+
+
 def get_archive_path(oidc_token: str | None = None) -> Path:
     local_candidates = [
         settings.root_dir / "data" / "india_lightning_2023_daily_archive.zip",
@@ -448,11 +468,12 @@ def comparison_dates(request: Request = None):
         with zipfile.ZipFile(zip_path, "r") as archive:
             return json.loads(archive.read("manifest.json").decode("utf-8"))
     except Exception as exc:
+        reason = classify_comparison_archive_error(exc)
         raise HTTPException(
             status_code=503,
             detail=(
-                "The corrected paired 2023 holdout archive (v2) is not available yet. "
-                "Generate and upload the independent +6-hour archive, then retry."
+                "The corrected paired 2023 holdout archive (v2) is unavailable "
+                f"(reason={reason}). Expected object: {COMPARISON_ARCHIVE_URI}"
             ),
         ) from exc
 
@@ -484,11 +505,12 @@ def comparison_day(date: str, request: Request = None):
     except HTTPException:
         raise
     except Exception as exc:
+        reason = classify_comparison_archive_error(exc)
         raise HTTPException(
             status_code=503,
             detail=(
-                "The corrected paired 2023 holdout archive (v2) is not available yet. "
-                "Generate and upload the independent +6-hour archive, then retry."
+                "The corrected paired 2023 holdout archive (v2) is unavailable "
+                f"(reason={reason}). Expected object: {COMPARISON_ARCHIVE_URI}"
             ),
         ) from exc
 
