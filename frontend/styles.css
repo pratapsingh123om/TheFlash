@@ -28,11 +28,12 @@
 body {
   margin: 0;
   min-width: 320px;
+  overflow-x: hidden;
   background: var(--bg-gradient);
   background-attachment: fixed;
   color: var(--text);
   font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  font-size: 15px;
+  font-size: 16px;
   line-height: 1.55;
 }
 
@@ -130,9 +131,7 @@ main { width: min(1340px, calc(100% - 2.5rem)); margin: 1.5rem auto 4rem; }
 .ribbon-item strong {
   font-size: 0.92rem;
   color: #fff;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  overflow-wrap: anywhere;
 }
 
 .seed-badge {
@@ -145,6 +144,10 @@ main { width: min(1340px, calc(100% - 2.5rem)); margin: 1.5rem auto 4rem; }
 
 .seed-badge.live {
   color: #3ddc84;
+}
+
+.seed-badge.configured {
+  color: var(--accent);
 }
 
 .seed-badge.stale {
@@ -235,7 +238,7 @@ main { width: min(1340px, calc(100% - 2.5rem)); margin: 1.5rem auto 4rem; }
   color: #c9d8ec;
   padding: 0.3rem 0.7rem;
   border-radius: 0.45rem;
-  font-size: 0.8rem;
+  font-size: 0.9rem;
   cursor: pointer;
   transition: all 0.15s ease;
 }
@@ -310,7 +313,7 @@ main { width: min(1340px, calc(100% - 2.5rem)); margin: 1.5rem auto 4rem; }
   color: #06101e;
   border: none;
   font-weight: 700;
-  font-size: 0.85rem;
+  font-size: 0.9rem;
   padding: 0.5rem 1rem;
   border-radius: 0.45rem;
   cursor: pointer;
@@ -326,7 +329,7 @@ main { width: min(1340px, calc(100% - 2.5rem)); margin: 1.5rem auto 4rem; }
   background: rgba(18, 38, 64, 0.8);
   color: #d1e2f6;
   border: 1px solid rgba(40, 80, 125, 0.7);
-  font-size: 0.85rem;
+  font-size: 0.9rem;
   font-weight: 600;
   padding: 0.5rem 1rem;
   border-radius: 0.45rem;
@@ -337,6 +340,17 @@ main { width: min(1340px, calc(100% - 2.5rem)); margin: 1.5rem auto 4rem; }
 .btn-archive-secondary:hover {
   background: #18365a;
   border-color: var(--accent);
+}
+
+.preset-pill:disabled,
+.btn-archive-primary:disabled,
+.btn-archive-secondary:disabled,
+.archive-date-input-wrap input:disabled,
+.archive-slider-wrap input:disabled {
+  cursor: not-allowed;
+  opacity: 0.48;
+  transform: none;
+  filter: none;
 }
 
 .comparison-status {
@@ -370,7 +384,7 @@ main { width: min(1340px, calc(100% - 2.5rem)); margin: 1.5rem auto 4rem; }
 }
 
 .metric-title {
-  font-size: 0.72rem;
+  font-size: 0.875rem;
   color: var(--muted);
   font-weight: 600;
   text-transform: uppercase;
@@ -385,7 +399,7 @@ main { width: min(1340px, calc(100% - 2.5rem)); margin: 1.5rem auto 4rem; }
 }
 
 .metric-sub {
-  font-size: 0.72rem;
+  font-size: 0.8rem;
   color: #7a8fa6;
 }
 
@@ -1103,12 +1117,39 @@ main { width: min(1340px, calc(100% - 2.5rem)); margin: 1.5rem auto 4rem; }
   .control-action { margin-left: 0; }
   .btn-primary { width: 100%; text-align: center; }
   .archive-controls-bar { flex-direction: column; align-items: stretch; }
+  .archive-slider-wrap { min-width: 0; }
+  .archive-actions { flex-wrap: wrap; }
   .limitations-grid { grid-template-columns: 1fr; }
 }
 
 @media (max-width: 600px) {
+  main { width: calc(100% - 1rem); margin-top: 0.75rem; }
+  .topbar { padding: 1.15rem 1rem; }
+  .section-card { padding: 1rem; border-radius: 0.75rem; }
+  .section-title-wrap { min-width: 0; }
+  .section-header { padding-bottom: 0.9rem; }
   .provenance-ribbon { grid-template-columns: 1fr; }
-  .comparison-metrics { grid-template-columns: 1fr 1fr; }
+  .comparison-metrics { grid-template-columns: 1fr; }
   .evidence-grid { grid-template-columns: 1fr; }
   .summary-grid { grid-template-columns: 1fr; }
+  .archive-controls-bar { padding: 0.75rem; gap: 0.85rem; }
+  .archive-date-input-wrap { align-items: stretch; flex-direction: column; }
+  .archive-slider-wrap { align-items: stretch; flex-direction: column; gap: 0.4rem; }
+  .archive-actions { display: grid; grid-template-columns: 1fr 1fr; }
+  .map-card-header { align-items: flex-start; flex-direction: column; gap: 0.45rem; }
+  .panel-heading { align-items: flex-start; flex-direction: column; }
+  .category-legend { flex-wrap: wrap; }
+  .forecast-controls-panel { padding: 0.9rem; }
+  .horizon-buttons { flex-wrap: wrap; }
+  .map-workspace { min-height: 0; }
+  .map-wrap, #forecast-map { min-height: 460px; }
+  .map-hint-bar { display: none; }
+  .inspector-panel { max-height: none; }
+  .table-container { max-width: 100%; }
+}
+
+@media (max-width: 380px) {
+  .archive-actions { grid-template-columns: 1fr; }
+  .metrics-grid { grid-template-columns: 1fr; }
+  .map-wrap, #forecast-map { min-height: 400px; }
 }

@@ -1,6 +1,6 @@
 # India Lightning 24-Hour Forecast Demo
 
-GitHub-ready backend and frontend for four rolling six-hour lightning-storm category forecasts over India. It keeps retrospective 2023 observations separate from a current-time, lightning-history-only recursive candidate. Source code comes from GitHub, while the frozen model and seed Parquet stay in the private Cloud Storage ZIP.
+GitHub-ready backend and frontend for four rolling six-hour lightning-storm category forecasts over India. It keeps the 2023 chronological development evaluation separate from the lightning-history-only recursive candidate. The candidate is current only when an external recent-history feed is configured; otherwise the interface labels it as a historical replay demonstration. Source code comes from GitHub, while the frozen model and seed Parquet stay in the private Cloud Storage ZIP.
 
 > **Research prototype:** this is not an operational public-warning service. A forecast is current only when the API reports `lightning_history_seed.is_current=true`. Horizons 2–4 recursively update lightning-history proxies, so uncertainty increases through the 24-hour demonstration.
 
@@ -100,7 +100,7 @@ If Vercel reports that the Python function is too large because of NumPy, SciPy,
 VERCEL_SUPPORT_LARGE_FUNCTIONS=1
 ```
 
-The dashboard intentionally waits for the user to press **Forecast today · next 24 h** on Vercel rather than starting inference during cold start.
+The dashboard intentionally waits for the user to press **Run 24 h replay demonstration** (or **Generate current 24 h candidate** when a live feed is configured) rather than starting inference during Vercel cold start.
 
 ## Run from Google Cloud Shell
 

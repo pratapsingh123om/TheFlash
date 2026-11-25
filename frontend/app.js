@@ -20,6 +20,7 @@ const playButton = document.getElementById("play-button");
 const tooltip = document.getElementById("map-tooltip");
 const mapWrap = document.getElementById("map-wrap");
 const provenance = document.getElementById("forecast-provenance");
+let runButtonLabel = "Run 24 h demonstration";
 
 // Major reference cities for spatial orientation
 const majorCities = [
@@ -381,19 +382,44 @@ function toggleAnimation() {
     clearInterval(state.playTimer);
     state.isPlaying = false;
     playButton.classList.remove("playing");
-    document.getElementById("play-icon").textContent = "▶";
-    document.getElementById("play-text").textContent = "Animate 24h";
+    document.getElementById("play-icon").textContent = "";
+    document.getElementById("play-text").textContent = "Animate 24 h";
   } else {
     if (!state.forecast) return;
     state.isPlaying = true;
     playButton.classList.add("playing");
-    document.getElementById("play-icon").textContent = "⏸";
-    document.getElementById("play-text").textContent = "Pause";
+    document.getElementById("play-icon").textContent = "";
+    document.getElementById("play-text").textContent = "Pause animation";
     state.playTimer = setInterval(() => {
       const nextIndex = (state.selected + 1) % state.forecast.periods.length;
       selectHorizon(nextIndex);
     }, 1500);
   }
+}
+
+function setRunMode(hasLiveFeed) {
+  const seedBadge = document.getElementById("meta-seed-status");
+  const seedTimeEl = document.getElementById("meta-seed-time");
+  const issueTimeEl = document.getElementById("meta-issue-time");
+
+  if (hasLiveFeed) {
+    runButtonLabel = "Generate current 24 h candidate";
+    if (seedBadge) {
+      seedBadge.className = "seed-badge configured";
+      seedBadge.textContent = "Feed configured · awaiting run";
+    }
+    if (seedTimeEl) seedTimeEl.textContent = "Loaded when forecast starts";
+  } else {
+    runButtonLabel = "Run 24 h replay demonstration";
+    if (seedBadge) {
+      seedBadge.className = "seed-badge stale";
+      seedBadge.textContent = "No live feed configured";
+    }
+    if (seedTimeEl) seedTimeEl.textContent = "Bundled historical replay seed";
+  }
+
+  if (issueTimeEl) issueTimeEl.textContent = "Generated on demand";
+  if (runButton && !runButton.disabled) runButton.textContent = runButtonLabel;
 }
 
 function updateProvenanceRibbon(seedInfo, issueTime) {
@@ -578,6 +604,11 @@ async function loadInitial() {
     if (config.latest_forecast_meta) {
       const meta = config.latest_forecast_meta;
       updateProvenanceRibbon(meta.lightning_history_seed, meta.issue_time_ist);
+    } else {
+      setRunMode(Boolean(
+        config.external_lightning_history_file ||
+        config.external_lightning_history_uri_configured
+      ));
     }
   } catch (error) {
     console.warn("Config load error", error);
@@ -601,7 +632,7 @@ async function loadInitial() {
 
 runButton.addEventListener("click", async () => {
   runButton.disabled = true;
-  runButton.textContent = "⏳ Running recursive forecast...";
+  runButton.textContent = "Running recursive forecast…";
   setStatus("", "Forecast running");
   try {
     const payload = await getJson("/api/forecast/run?mode=lightning_only_today", { method: "POST" });
@@ -615,7 +646,7 @@ runButton.addEventListener("click", async () => {
     setStatus("error", error.message);
   } finally {
     runButton.disabled = false;
-    runButton.textContent = "⚡ Forecast today · next 24 h";
+    runButton.textContent = runButtonLabel;
   }
 });
 
@@ -623,6 +654,46 @@ runButton.addEventListener("click", async () => {
 let comparisonDates = [];
 let isComparisonPlaying = false;
 let comparisonPlayTimer = null;
+let comparisonData = null;
+
+function setComparisonControlsEnabled(enabled) {
+  for (const id of [
+    "archive-date-picker",
+    "archive-slider",
+    "archive-play-btn",
+    "archive-load-btn",
+  ]) {
+    const element = document.getElementById(id);
+    if (element) element.disabled = !enabled;
+  }
+  document.querySelectorAll(".preset-pill").forEach(button => {
+    button.disabled = !enabled;
+  });
+}
+
+function drawComparisonUnavailable(targetCanvas, heading, detail) {
+  if (!targetCanvas) return;
+  const targetContext = targetCanvas.getContext("2d");
+  const ratio = window.devicePixelRatio || 1;
+  const rect = targetCanvas.getBoundingClientRect();
+  const width = Math.max(240, rect.width || 240);
+  const height = width;
+  targetCanvas.width = Math.round(width * ratio);
+  targetCanvas.height = Math.round(height * ratio);
+  targetContext.setTransform(ratio, 0, 0, ratio, 0, 0);
+  targetContext.fillStyle = "#07111f";
+  targetContext.fillRect(0, 0, width, height);
+  targetContext.strokeStyle = "#1c324f";
+  targetContext.lineWidth = 1;
+  targetContext.strokeRect(16, 16, width - 32, height - 32);
+  targetContext.textAlign = "center";
+  targetContext.fillStyle = "#f0f5fb";
+  targetContext.font = "700 18px Inter, system-ui, sans-serif";
+  targetContext.fillText(heading, width / 2, height / 2 - 12);
+  targetContext.fillStyle = "#94a9c2";
+  targetContext.font = "14px Inter, system-ui, sans-serif";
+  targetContext.fillText(detail, width / 2, height / 2 + 18);
+}
 
 function drawBoundaryOn(targetContext, width, height) {
   if (!state.boundary) return;
@@ -676,6 +747,7 @@ function drawComparisonCanvas(targetCanvas, cells, valueIndex, maximum) {
 }
 
 function renderComparison(data) {
+  comparisonData = data;
   // Shared color scale is essential for an honest magnitude comparison.
   const sharedMaximum = Math.max(
     Number(data.predicted_max) || 0,
@@ -731,12 +803,12 @@ function toggleComparisonPlay() {
   if (isComparisonPlaying) {
     clearInterval(comparisonPlayTimer);
     isComparisonPlaying = false;
-    if (playButton) playButton.textContent = "▶ Play 2023";
+    if (playButton) playButton.textContent = "Play 2023";
     return;
   }
   if (!comparisonDates.length) return;
   isComparisonPlaying = true;
-  if (playButton) playButton.textContent = "⏸ Pause";
+  if (playButton) playButton.textContent = "Pause playback";
   comparisonPlayTimer = setInterval(() => {
     const slider = document.getElementById("archive-slider");
     if (!slider) return;
@@ -748,10 +820,12 @@ function toggleComparisonPlay() {
 
 async function initComparisonControls() {
   const status = document.getElementById("comparison-status");
+  setComparisonControlsEnabled(false);
   try {
     const manifest = await getJson("/api/comparison/dates");
     comparisonDates = manifest.dates || [];
     if (!comparisonDates.length) throw new Error("Comparison archive contains no dates");
+    setComparisonControlsEnabled(true);
     const slider = document.getElementById("archive-slider");
     slider.min = "0";
     slider.max = String(comparisonDates.length - 1);
@@ -760,7 +834,18 @@ async function initComparisonControls() {
     await loadComparisonDay(defaultDate);
   } catch (error) {
     status.className = "comparison-status error";
-    status.textContent = `Awaiting v2 Comparison Archive: ${error.message}`;
+    status.textContent = "Corrected 2023 comparison archive is pending. Frozen full-year evidence remains available below.";
+    drawComparisonUnavailable(
+      document.getElementById("comparison-predicted-map"),
+      "Comparison archive pending",
+      "Independent +6 h v2 predictions are not uploaded yet"
+    );
+    drawComparisonUnavailable(
+      document.getElementById("comparison-observed-map"),
+      "Comparison archive pending",
+      "Observed pairs will appear with the verified v2 archive"
+    );
+    console.warn("Comparison archive unavailable", error);
   }
 
   const picker = document.getElementById("archive-date-picker");
@@ -783,6 +868,14 @@ async function initComparisonControls() {
   });
 }
 
-window.addEventListener("resize", drawMap);
-loadInitial();
-initComparisonControls();
+window.addEventListener("resize", () => {
+  drawMap();
+  if (comparisonData) renderComparison(comparisonData);
+});
+
+async function bootstrap() {
+  await loadInitial();
+  await initComparisonControls();
+}
+
+bootstrap();

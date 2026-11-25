@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="India Lightning Forecasting System — 2023 Chronological Holdout Benchmark and Current 24-Hour Recursive Demonstration">
+  <meta name="description" content="India Lightning Forecasting System — 2023 Chronological Development Evaluation and 24-Hour Recursive Demonstration">
   <title>India Lightning Risk Outlook</title>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⚡</text></svg>">
   <link rel="stylesheet" href="/styles.css">
@@ -18,9 +18,9 @@
         <span class="badge badge-model">106-Feature XGBoost Ensemble</span>
       </div>
       <h1>India Lightning Risk Outlook</h1>
-      <p class="subtitle">Frozen 2023 Chronological-Holdout Evaluation & Current +24-Hour Recursive Demonstration</p>
+      <p class="subtitle">Frozen 2023 Chronological Development Evaluation & 24-Hour Recursive Demonstration</p>
     </div>
-    <div class="status-wrap">
+    <div class="status-wrap" role="status" aria-live="polite">
       <span id="status-dot" class="status-dot"></span>
       <span id="status-text">Checking model runtime…</span>
     </div>
@@ -87,12 +87,12 @@
           <span id="slider-date-display" class="slider-date-display">2023-07-21</span>
         </div>
         <div class="archive-actions">
-          <button type="button" id="archive-play-btn" class="btn-archive-secondary">▶ Play 2023</button>
+          <button type="button" id="archive-play-btn" class="btn-archive-secondary">Play 2023</button>
           <button type="button" id="archive-load-btn" class="btn-archive-primary">Compare Day</button>
         </div>
       </div>
 
-      <div id="comparison-status" class="comparison-status">Loading paired 2023 benchmark archive…</div>
+      <div id="comparison-status" class="comparison-status" role="status" aria-live="polite">Loading paired 2023 benchmark archive…</div>
 
       <!-- Daily Comparison Quantitative Metrics Ribbon -->
       <div class="comparison-metrics" aria-label="Daily Quantitative Holdout Metrics">
@@ -132,7 +132,7 @@
           </div>
           <p class="map-desc">Daily sum of four independent +6h windows (retaining observed history at each window issue time).</p>
           <div class="canvas-wrapper">
-            <canvas id="comparison-predicted-map" width="620" height="620" aria-label="Model predicted 2023 lightning map"></canvas>
+            <canvas id="comparison-predicted-map" width="620" height="620" aria-label="Model predicted 2023 lightning map">Model comparison map requires canvas support.</canvas>
           </div>
         </article>
 
@@ -143,7 +143,7 @@
           </div>
           <p class="map-desc">Observed regional targets for the exact same windows and 50 km circular radii.</p>
           <div class="canvas-wrapper">
-            <canvas id="comparison-observed-map" width="620" height="620" aria-label="Observed 2023 lightning reality map"></canvas>
+            <canvas id="comparison-observed-map" width="620" height="620" aria-label="Observed 2023 lightning reality map">Observed comparison map requires canvas support.</canvas>
           </div>
         </article>
       </div>
@@ -162,9 +162,9 @@
       <div class="section-header">
         <div class="section-title-wrap">
           <span class="section-tag">Section 3</span>
-          <h2>Current 24-Hour Candidate Forecast</h2>
+          <h2>24-Hour Recursive Candidate</h2>
           <p class="section-desc">
-            Experimental 4-step recursive outlook (+6h, +12h, +18h, +24h) driven by recent gridded lightning-history lags.
+            Experimental 4-step outlook (+6h, +12h, +18h, +24h). It uses a current gridded lightning-history feed when configured; otherwise the app clearly runs a historical replay demonstration.
           </p>
         </div>
       </div>
@@ -185,7 +185,7 @@
             <div class="horizon-wrapper">
               <div id="horizon-buttons" class="horizon-buttons"></div>
               <button id="play-button" type="button" class="btn-secondary" title="Play 24-hour sequence animation">
-                <span id="play-icon">▶</span> <span id="play-text">Animate 24h</span>
+                <span id="play-icon" aria-hidden="true"></span> <span id="play-text">Animate 24 h</span>
               </button>
             </div>
           </div>
@@ -201,7 +201,7 @@
           </div>
 
           <div class="control-group control-action">
-            <button id="run-button" type="button" class="btn-primary">⚡ Forecast today · next 24 h</button>
+            <button id="run-button" type="button" class="btn-primary" aria-describedby="forecast-provenance">Run 24 h replay demonstration</button>
           </div>
         </div>
 
@@ -271,8 +271,8 @@
         <div class="map-workspace">
           <!-- Interactive Canvas Map -->
           <div class="map-wrap" id="map-wrap">
-            <canvas id="forecast-map" width="900" height="820" aria-label="India lightning warning map"></canvas>
-            <div id="map-empty" class="map-empty">Click "Forecast today · next 24 h" to run the recursive model.</div>
+            <canvas id="forecast-map" width="900" height="820" aria-label="India lightning warning map">Forecast map requires canvas support.</canvas>
+            <div id="map-empty" class="map-empty">Run the 24-hour demonstration to generate the recursive candidate.</div>
 
             <!-- Floating Cursor Hover Tooltip -->
             <div id="map-tooltip" class="map-tooltip" style="display: none;">
@@ -376,7 +376,7 @@
           <h2>Frozen Model Evidence & Scientific Benchmarks</h2>
           <p class="section-desc">
             Exact empirical evaluation from the frozen deployment bundle (<code>evaluation_summary_2023.json</code>).
-            Rigorous chronological split: Training 2019–2021, Selection & Calibration 2022, Holdout Evaluation 2023 across 7,356,570 eligible predictions.
+            Rigorous chronological split: Training 2019–2021, Selection & Calibration 2022, and a 2023 chronological test split across 7,356,570 eligible predictions. Because 2023 results have been repeatedly inspected, they are development evidence rather than a final untouched test.
           </p>
         </div>
       </div>
@@ -385,8 +385,8 @@
       <div class="evidence-grid">
         <div class="evidence-card">
           <span class="evidence-title">Chronological Split</span>
-          <strong>2019–2021 Train · 2022 Calib · 2023 Test</strong>
-          <span class="evidence-sub">Zero future target leakage; thresholds locked on 2022</span>
+          <strong>2019–2021 Train · 2022 Calib · 2023 Development Evidence</strong>
+          <span class="evidence-sub">Chronological separation; thresholds locked before 2023</span>
         </div>
         <div class="evidence-card">
           <span class="evidence-title">Regional Mass Recovery</span>
@@ -407,7 +407,7 @@
 
       <!-- Spatial Skill Tolerance Table: Model vs Persistence -->
       <div class="table-container">
-        <h3>Spatial Skill by Operational Tolerance (Holdout Year 2023)</h3>
+        <h3>Spatial Skill by Operational Tolerance (2023 Chronological Test Split)</h3>
         <p class="table-caption">
           Comparing the native 0.25° spatial model against a 6-hour persistence baseline across spatial tolerance radii.
         </p>
@@ -507,7 +507,7 @@
 
       <!-- Class-Specific Calibration & Discrimination Metrics Table -->
       <div class="table-container">
-        <h3>Class Calibration & Discrimination Performance (2023 Holdout)</h3>
+        <h3>Class Calibration & Discrimination Performance (2023 Development Evaluation)</h3>
         <table class="benchmark-table">
           <thead>
             <tr>
@@ -647,7 +647,7 @@
   <footer class="app-footer">
     <div class="footer-content">
       <p><strong>India Lightning Minor Project</strong> · Google Workload Identity Protected · XGBoost 106-Feature Model</p>
-      <p class="footer-sub">Chronological holdout evaluation across 365 days of 2023 · Native 0.25° resolution ERA5 + WWLLN</p>
+      <p class="footer-sub">Chronological development evaluation across 365 days of 2023 · Native 0.25° resolution ERA5 + WWLLN</p>
     </div>
   </footer>
 

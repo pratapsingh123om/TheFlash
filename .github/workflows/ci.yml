@@ -34,6 +34,9 @@ jobs:
       - name: Validate frontend JavaScript
         run: node --check frontend/app.js
 
+      - name: Validate frontend DOM contract and scientific states
+        run: python tests/frontend_contract_test.py
+
       - name: Test verified asset bootstrap
         run: python tests/bootstrap_test.py
 
