@@ -3,10 +3,11 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="India Lightning Forecasting System — 2023 Chronological Development Evaluation and 24-Hour Recursive Demonstration">
-  <title>India Lightning Risk Outlook</title>
+  <meta name="description" content="India Lightning Outlook — native 0.25-degree regional warning research prototype">
+  <title>India Lightning Outlook</title>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⚡</text></svg>">
   <link rel="stylesheet" href="/styles.css">
+  <link rel="stylesheet" href="/reference-theme.css">
 </head>
 <body>
   <!-- SECTION 1: Project Status & Header -->
@@ -14,11 +15,11 @@
     <div class="header-main">
       <div class="header-badges">
         <span class="badge badge-prototype">Research Prototype</span>
-        <span class="badge badge-grid">Native 0.25° Grid (~28 km)</span>
-        <span class="badge badge-model">106-Feature XGBoost Ensemble</span>
+        <span class="badge badge-grid">6-Hour Lead</span>
+        <span class="badge badge-model">Native 0.25° Grid</span>
       </div>
-      <h1>India Lightning Risk Outlook</h1>
-      <p class="subtitle">Frozen 2023 Chronological Development Evaluation & 24-Hour Recursive Demonstration</p>
+      <h1>India Lightning Outlook</h1>
+      <p class="subtitle">Regional warning research prototype · 2023 development evaluation · recursive 24-hour demonstration</p>
     </div>
     <div class="status-wrap" role="status" aria-live="polite">
       <span id="status-dot" class="status-dot"></span>
@@ -62,14 +63,14 @@
     <section class="section-card archive-section" id="section-comparison" aria-label="Section 2: 2023 Model Versus Observed Comparison Player">
       <div class="section-header">
         <div class="section-title-wrap">
-          <span class="section-tag">Section 2</span>
+          <span class="section-tag">Development evaluation</span>
           <h2>2023 Benchmark: Model Forecast vs Observed Reality</h2>
           <p class="section-desc">
             Frozen 2022 model evaluated on 2023 chronological holdout data. Every 6-hour window is predicted independently using observed pre-issue history. Predicted and observed maps share an identical logarithmic color scale to guarantee honest visual magnitude comparison.
           </p>
         </div>
         <div class="archive-presets">
-          <span class="presets-label">⚡ Benchmark Days:</span>
+          <span class="presets-label">Benchmark days</span>
           <button type="button" class="preset-pill" data-date="2023-07-21">July 21 (Monsoon Peak)</button>
           <button type="button" class="preset-pill" data-date="2023-09-15">Sept 15 (North Convection)</button>
           <button type="button" class="preset-pill" data-date="2023-03-18">March 18 (Pre-Monsoon)</button>
@@ -150,7 +151,7 @@
 
       <!-- Explanatory note on regional mass targets -->
       <div class="target-explanation-box">
-        <strong>💡 Target Definition & Interpretation Note:</strong>
+        <strong>Target definition and interpretation</strong>
         <p>
           Totals represent <strong>Overlapping 50 km Regional Mass</strong> (cumulative lightning activity within 50 km of each cell center), designed to measure spatial convective footprint and severe impact hazard. They are <em>not unique point strike counts</em> across India. Full-year 2023 evaluation recovers <strong>16,130,726</strong> predicted mass vs <strong>23,681,832</strong> observed mass (<strong>68.11%</strong> regional mass recovery).
         </p>
@@ -161,7 +162,7 @@
     <section class="section-card forecast-section" id="section-current-forecast" aria-label="Section 3: Current 24-Hour Candidate Forecast">
       <div class="section-header">
         <div class="section-title-wrap">
-          <span class="section-tag">Section 3</span>
+          <span class="section-tag">Forecast viewer</span>
           <h2>24-Hour Recursive Candidate</h2>
           <p class="section-desc">
             Experimental 4-step outlook (+6h, +12h, +18h, +24h). It uses a current gridded lightning-history feed when configured; otherwise the app clearly runs a historical replay demonstration.
@@ -171,7 +172,7 @@
 
       <!-- Visible Uncertainty Growth Disclaimer -->
       <div class="uncertainty-warning-box">
-        <div class="warning-badge">⚠️ Recursive Horizon Dynamics</div>
+        <div class="warning-badge">Recursive horizon dynamics</div>
         <p>
           Horizon <strong>+6h</strong> starts directly from observed history. Horizons <strong>+12h, +18h, and +24h</strong> recursively propagate the model’s predicted regional flash densities back into the lag graph; <strong>uncertainty compounds progressively with each forecast horizon</strong>. This demonstration candidate requires prospective operational validation.
         </p>
@@ -207,7 +208,7 @@
 
         <!-- Quick City Jump Chips -->
         <div class="quick-locations">
-          <span class="quick-label">📍 Quick Jump:</span>
+          <span class="quick-label">Quick region</span>
           <div class="chips-container" id="city-chips">
             <button type="button" class="chip" data-lat="28.61" data-lon="77.20">New Delhi</button>
             <button type="button" class="chip" data-lat="22.57" data-lon="88.36">Kolkata</button>
@@ -372,7 +373,7 @@
     <section class="section-card evidence-section" id="section-evidence" aria-label="Section 4: Frozen Model Evidence and Benchmarks">
       <div class="section-header">
         <div class="section-title-wrap">
-          <span class="section-tag">Section 4</span>
+          <span class="section-tag">Verification</span>
           <h2>Frozen Model Evidence & Scientific Benchmarks</h2>
           <p class="section-desc">
             Exact empirical evaluation from the frozen deployment bundle (<code>evaluation_summary_2023.json</code>).
@@ -576,7 +577,7 @@
     <section class="section-card limitations-section" id="section-limitations" aria-label="Section 5: Scientific Limitations and Safety Notices">
       <div class="section-header">
         <div class="section-title-wrap">
-          <span class="section-tag">Section 5</span>
+          <span class="section-tag">Research limits</span>
           <h2>Scientific Limitations & Safety Disclaimers</h2>
           <p class="section-desc">
             Essential operational caveats, modeling boundaries, and safety constraints governing this research system.
