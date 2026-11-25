@@ -1,0 +1,649 @@
+{
+  "manifest": {
+    "script_version": "statistical-showcase-v1",
+    "built_utc": "2026-11-25T09:29:40.811581+00:00",
+    "source_dataset": "india_lightning_events_exact_0p25_v2",
+    "source_partition_count": 60,
+    "source_partitions": [
+      {
+        "name": "india_lightning_exact_0p25_2019_01.parquet",
+        "rows": 51074
+      },
+      {
+        "name": "india_lightning_exact_0p25_2019_02.parquet",
+        "rows": 168602
+      },
+      {
+        "name": "india_lightning_exact_0p25_2019_03.parquet",
+        "rows": 103166
+      },
+      {
+        "name": "india_lightning_exact_0p25_2019_04.parquet",
+        "rows": 198051
+      },
+      {
+        "name": "india_lightning_exact_0p25_2019_05.parquet",
+        "rows": 127624
+      },
+      {
+        "name": "india_lightning_exact_0p25_2019_06.parquet",
+        "rows": 261745
+      },
+      {
+        "name": "india_lightning_exact_0p25_2019_07.parquet",
+        "rows": 170896
+      },
+      {
+        "name": "india_lightning_exact_0p25_2019_08.parquet",
+        "rows": 251630
+      },
+      {
+        "name": "india_lightning_exact_0p25_2019_09.parquet",
+        "rows": 441672
+      },
+      {
+        "name": "india_lightning_exact_0p25_2019_10.parquet",
+        "rows": 204087
+      },
+      {
+        "name": "india_lightning_exact_0p25_2019_11.parquet",
+        "rows": 94309
+      },
+      {
+        "name": "india_lightning_exact_0p25_2019_12.parquet",
+        "rows": 26716
+      },
+      {
+        "name": "india_lightning_exact_0p25_2020_01.parquet",
+        "rows": 27450
+      },
+      {
+        "name": "india_lightning_exact_0p25_2020_02.parquet",
+        "rows": 46091
+      },
+      {
+        "name": "india_lightning_exact_0p25_2020_03.parquet",
+        "rows": 176635
+      },
+      {
+        "name": "india_lightning_exact_0p25_2020_04.parquet",
+        "rows": 198834
+      },
+      {
+        "name": "india_lightning_exact_0p25_2020_05.parquet",
+        "rows": 161234
+      },
+      {
+        "name": "india_lightning_exact_0p25_2020_06.parquet",
+        "rows": 174234
+      },
+      {
+        "name": "india_lightning_exact_0p25_2020_07.parquet",
+        "rows": 117371
+      },
+      {
+        "name": "india_lightning_exact_0p25_2020_08.parquet",
+        "rows": 190185
+      },
+      {
+        "name": "india_lightning_exact_0p25_2020_09.parquet",
+        "rows": 327293
+      },
+      {
+        "name": "india_lightning_exact_0p25_2020_10.parquet",
+        "rows": 274339
+      },
+      {
+        "name": "india_lightning_exact_0p25_2020_11.parquet",
+        "rows": 28787
+      },
+      {
+        "name": "india_lightning_exact_0p25_2020_12.parquet",
+        "rows": 5122
+      },
+      {
+        "name": "india_lightning_exact_0p25_2021_01.parquet",
+        "rows": 47816
+      },
+      {
+        "name": "india_lightning_exact_0p25_2021_02.parquet",
+        "rows": 21669
+      },
+      {
+        "name": "india_lightning_exact_0p25_2021_03.parquet",
+        "rows": 50839
+      },
+      {
+        "name": "india_lightning_exact_0p25_2021_04.parquet",
+        "rows": 107099
+      },
+      {
+        "name": "india_lightning_exact_0p25_2021_05.parquet",
+        "rows": 247525
+      },
+      {
+        "name": "india_lightning_exact_0p25_2021_06.parquet",
+        "rows": 275301
+      },
+      {
+        "name": "india_lightning_exact_0p25_2021_07.parquet",
+        "rows": 222558
+      },
+      {
+        "name": "india_lightning_exact_0p25_2021_08.parquet",
+        "rows": 188699
+      },
+      {
+        "name": "india_lightning_exact_0p25_2021_09.parquet",
+        "rows": 514652
+      },
+      {
+        "name": "india_lightning_exact_0p25_2021_10.parquet",
+        "rows": 362469
+      },
+      {
+        "name": "india_lightning_exact_0p25_2021_11.parquet",
+        "rows": 62434
+      },
+      {
+        "name": "india_lightning_exact_0p25_2021_12.parquet",
+        "rows": 43436
+      },
+      {
+        "name": "india_lightning_exact_0p25_2022_01.parquet",
+        "rows": 49892
+      },
+      {
+        "name": "india_lightning_exact_0p25_2022_02.parquet",
+        "rows": 63921
+      },
+      {
+        "name": "india_lightning_exact_0p25_2022_03.parquet",
+        "rows": 24708
+      },
+      {
+        "name": "india_lightning_exact_0p25_2022_04.parquet",
+        "rows": 226924
+      },
+      {
+        "name": "india_lightning_exact_0p25_2022_05.parquet",
+        "rows": 335266
+      },
+      {
+        "name": "india_lightning_exact_0p25_2022_06.parquet",
+        "rows": 237309
+      },
+      {
+        "name": "india_lightning_exact_0p25_2022_07.parquet",
+        "rows": 447712
+      },
+      {
+        "name": "india_lightning_exact_0p25_2022_08.parquet",
+        "rows": 210030
+      },
+      {
+        "name": "india_lightning_exact_0p25_2022_09.parquet",
+        "rows": 562126
+      },
+      {
+        "name": "india_lightning_exact_0p25_2022_10.parquet",
+        "rows": 378170
+      },
+      {
+        "name": "india_lightning_exact_0p25_2022_11.parquet",
+        "rows": 29498
+      },
+      {
+        "name": "india_lightning_exact_0p25_2022_12.parquet",
+        "rows": 13840
+      },
+      {
+        "name": "india_lightning_exact_0p25_2023_01.parquet",
+        "rows": 28493
+      },
+      {
+        "name": "india_lightning_exact_0p25_2023_02.parquet",
+        "rows": 16575
+      },
+      {
+        "name": "india_lightning_exact_0p25_2023_03.parquet",
+        "rows": 269780
+      },
+      {
+        "name": "india_lightning_exact_0p25_2023_04.parquet",
+        "rows": 267301
+      },
+      {
+        "name": "india_lightning_exact_0p25_2023_05.parquet",
+        "rows": 248011
+      },
+      {
+        "name": "india_lightning_exact_0p25_2023_06.parquet",
+        "rows": 241275
+      },
+      {
+        "name": "india_lightning_exact_0p25_2023_07.parquet",
+        "rows": 396123
+      },
+      {
+        "name": "india_lightning_exact_0p25_2023_08.parquet",
+        "rows": 128721
+      },
+      {
+        "name": "india_lightning_exact_0p25_2023_09.parquet",
+        "rows": 682286
+      },
+      {
+        "name": "india_lightning_exact_0p25_2023_10.parquet",
+        "rows": 157572
+      },
+      {
+        "name": "india_lightning_exact_0p25_2023_11.parquet",
+        "rows": 103831
+      },
+      {
+        "name": "india_lightning_exact_0p25_2023_12.parquet",
+        "rows": 11567
+      }
+    ],
+    "timezone_for_display": "Asia/Kolkata (IST)",
+    "window_definition": "Four fixed six-hour IST periods per calendar day",
+    "years": [
+      2019,
+      2023
+    ],
+    "retained_strokes": 11102575,
+    "expected_windows": 7304,
+    "scored_windows": 6821,
+    "masked_windows": 483,
+    "source_days_missing": 94,
+    "source_days_unreadable": 3,
+    "missing_policy": "Missing/corrupt observation periods remain masked; no synthetic target events or zero labels were created.",
+    "reconciliation_checks": {
+      "partition_count_is_60": true,
+      "partition_manifest_count_is_60": true,
+      "parquet_total_matches_dataset_manifest": true,
+      "partition_manifest_total_matches_parquet": true,
+      "annual_total_matches_parquet": true,
+      "monthly_total_matches_parquet": true,
+      "season_time_total_matches_parquet": true,
+      "windows_reconcile": true,
+      "all_source_fingerprints_verified": true
+    },
+    "reconciliation_status": "passed"
+  },
+  "summary": {
+    "retained_strokes": 11102575,
+    "scored_windows": 6821,
+    "masked_windows": 483,
+    "years_covered": "2019\u20132023",
+    "peak_season": "Southwest monsoon",
+    "peak_season_share_percent": 54.4
+  },
+  "annual": [
+    {
+      "year": 2019,
+      "strokes": 2099572,
+      "share_percent": 18.91
+    },
+    {
+      "year": 2020,
+      "strokes": 1727575,
+      "share_percent": 15.56
+    },
+    {
+      "year": 2021,
+      "strokes": 2144497,
+      "share_percent": 19.32
+    },
+    {
+      "year": 2022,
+      "strokes": 2579396,
+      "share_percent": 23.23
+    },
+    {
+      "year": 2023,
+      "strokes": 2551535,
+      "share_percent": 22.98
+    }
+  ],
+  "monthly": [
+    {
+      "month": 1,
+      "label": "Jan",
+      "strokes": 204746,
+      "five_year_mean": 40949.2,
+      "share_percent": 1.84
+    },
+    {
+      "month": 2,
+      "label": "Feb",
+      "strokes": 316093,
+      "five_year_mean": 63218.6,
+      "share_percent": 2.85
+    },
+    {
+      "month": 3,
+      "label": "Mar",
+      "strokes": 618772,
+      "five_year_mean": 123754.4,
+      "share_percent": 5.57
+    },
+    {
+      "month": 4,
+      "label": "Apr",
+      "strokes": 996990,
+      "five_year_mean": 199398.0,
+      "share_percent": 8.98
+    },
+    {
+      "month": 5,
+      "label": "May",
+      "strokes": 1121453,
+      "five_year_mean": 224290.6,
+      "share_percent": 10.1
+    },
+    {
+      "month": 6,
+      "label": "Jun",
+      "strokes": 1186839,
+      "five_year_mean": 237367.8,
+      "share_percent": 10.69
+    },
+    {
+      "month": 7,
+      "label": "Jul",
+      "strokes": 1357475,
+      "five_year_mean": 271495.0,
+      "share_percent": 12.23
+    },
+    {
+      "month": 8,
+      "label": "Aug",
+      "strokes": 964834,
+      "five_year_mean": 192966.8,
+      "share_percent": 8.69
+    },
+    {
+      "month": 9,
+      "label": "Sep",
+      "strokes": 2530885,
+      "five_year_mean": 506177.0,
+      "share_percent": 22.8
+    },
+    {
+      "month": 10,
+      "label": "Oct",
+      "strokes": 1384090,
+      "five_year_mean": 276818.0,
+      "share_percent": 12.47
+    },
+    {
+      "month": 11,
+      "label": "Nov",
+      "strokes": 319445,
+      "five_year_mean": 63889.0,
+      "share_percent": 2.88
+    },
+    {
+      "month": 12,
+      "label": "Dec",
+      "strokes": 100953,
+      "five_year_mean": 20190.6,
+      "share_percent": 0.91
+    }
+  ],
+  "season_time": [
+    {
+      "season": "Winter",
+      "period": "Night",
+      "strokes": 133894,
+      "share_percent": 1.21
+    },
+    {
+      "season": "Winter",
+      "period": "Morning",
+      "strokes": 83853,
+      "share_percent": 0.76
+    },
+    {
+      "season": "Winter",
+      "period": "Afternoon",
+      "strokes": 111807,
+      "share_percent": 1.01
+    },
+    {
+      "season": "Winter",
+      "period": "Evening",
+      "strokes": 191285,
+      "share_percent": 1.72
+    },
+    {
+      "season": "Pre-monsoon",
+      "period": "Night",
+      "strokes": 619789,
+      "share_percent": 5.58
+    },
+    {
+      "season": "Pre-monsoon",
+      "period": "Morning",
+      "strokes": 235888,
+      "share_percent": 2.12
+    },
+    {
+      "season": "Pre-monsoon",
+      "period": "Afternoon",
+      "strokes": 733491,
+      "share_percent": 6.61
+    },
+    {
+      "season": "Pre-monsoon",
+      "period": "Evening",
+      "strokes": 1148047,
+      "share_percent": 10.34
+    },
+    {
+      "season": "Southwest monsoon",
+      "period": "Night",
+      "strokes": 1380079,
+      "share_percent": 12.43
+    },
+    {
+      "season": "Southwest monsoon",
+      "period": "Morning",
+      "strokes": 469598,
+      "share_percent": 4.23
+    },
+    {
+      "season": "Southwest monsoon",
+      "period": "Afternoon",
+      "strokes": 1942151,
+      "share_percent": 17.49
+    },
+    {
+      "season": "Southwest monsoon",
+      "period": "Evening",
+      "strokes": 2248205,
+      "share_percent": 20.25
+    },
+    {
+      "season": "Post-monsoon",
+      "period": "Night",
+      "strokes": 342945,
+      "share_percent": 3.09
+    },
+    {
+      "season": "Post-monsoon",
+      "period": "Morning",
+      "strokes": 105184,
+      "share_percent": 0.95
+    },
+    {
+      "season": "Post-monsoon",
+      "period": "Afternoon",
+      "strokes": 621902,
+      "share_percent": 5.6
+    },
+    {
+      "season": "Post-monsoon",
+      "period": "Evening",
+      "strokes": 734457,
+      "share_percent": 6.62
+    }
+  ],
+  "hotspots": [
+    {
+      "rank": 1,
+      "grid_id": 9336,
+      "latitude": 25.25,
+      "longitude": 92.0,
+      "strokes": 11972,
+      "share_percent": 0.108
+    },
+    {
+      "rank": 2,
+      "grid_id": 9335,
+      "latitude": 25.25,
+      "longitude": 91.75,
+      "strokes": 11618,
+      "share_percent": 0.105
+    },
+    {
+      "rank": 3,
+      "grid_id": 9337,
+      "latitude": 25.25,
+      "longitude": 92.25,
+      "strokes": 11529,
+      "share_percent": 0.104
+    },
+    {
+      "rank": 4,
+      "grid_id": 9334,
+      "latitude": 25.25,
+      "longitude": 91.5,
+      "strokes": 11434,
+      "share_percent": 0.103
+    },
+    {
+      "rank": 5,
+      "grid_id": 8475,
+      "latitude": 23.5,
+      "longitude": 86.75,
+      "strokes": 11212,
+      "share_percent": 0.101
+    },
+    {
+      "rank": 6,
+      "grid_id": 9333,
+      "latitude": 25.25,
+      "longitude": 91.25,
+      "strokes": 10608,
+      "share_percent": 0.096
+    },
+    {
+      "rank": 7,
+      "grid_id": 7623,
+      "latitude": 21.75,
+      "longitude": 83.75,
+      "strokes": 10322,
+      "share_percent": 0.093
+    },
+    {
+      "rank": 8,
+      "grid_id": 1715,
+      "latitude": 9.5,
+      "longitude": 76.75,
+      "strokes": 10246,
+      "share_percent": 0.092
+    },
+    {
+      "rank": 9,
+      "grid_id": 7739,
+      "latitude": 22.0,
+      "longitude": 82.75,
+      "strokes": 10062,
+      "share_percent": 0.091
+    },
+    {
+      "rank": 10,
+      "grid_id": 8596,
+      "latitude": 23.75,
+      "longitude": 87.0,
+      "strokes": 9927,
+      "share_percent": 0.089
+    },
+    {
+      "rank": 11,
+      "grid_id": 1595,
+      "latitude": 9.25,
+      "longitude": 76.75,
+      "strokes": 9911,
+      "share_percent": 0.089
+    },
+    {
+      "rank": 12,
+      "grid_id": 8355,
+      "latitude": 23.25,
+      "longitude": 86.75,
+      "strokes": 9795,
+      "share_percent": 0.088
+    }
+  ],
+  "top_days": [
+    {
+      "rank": 1,
+      "date": "2022-09-10",
+      "strokes": 46176,
+      "share_percent": 0.416
+    },
+    {
+      "rank": 2,
+      "date": "2019-09-23",
+      "strokes": 45381,
+      "share_percent": 0.409
+    },
+    {
+      "rank": 3,
+      "date": "2023-09-15",
+      "strokes": 37851,
+      "share_percent": 0.341
+    },
+    {
+      "rank": 4,
+      "date": "2023-03-18",
+      "strokes": 36781,
+      "share_percent": 0.331
+    },
+    {
+      "rank": 5,
+      "date": "2023-09-29",
+      "strokes": 36538,
+      "share_percent": 0.329
+    },
+    {
+      "rank": 6,
+      "date": "2020-03-13",
+      "strokes": 36472,
+      "share_percent": 0.329
+    },
+    {
+      "rank": 7,
+      "date": "2023-09-12",
+      "strokes": 36335,
+      "share_percent": 0.327
+    },
+    {
+      "rank": 8,
+      "date": "2022-09-28",
+      "strokes": 35653,
+      "share_percent": 0.321
+    }
+  ],
+  "takeaways": {
+    "coverage": "6,821 of 7,304 six-hour windows (93.4%) were scored; 483 remained masked rather than being treated as zero.",
+    "annual": "2022 had the largest audited annual volume at 2,579,396 strokes, supporting a chronological split instead of random sampling.",
+    "monthly": "Sep contributed 22.8% of all audited strokes, supporting season-aware calendar features.",
+    "daily_cycle": "Evening contained 4,321,994 strokes (38.9%), supporting six-hour IST issue periods.",
+    "spatial": "The leading 0.25\u00b0 cell was centred at 25.25\u00b0N, 92.00\u00b0E with 11,972 strokes, supporting native-grid spatial modelling rather than a single national total."
+  }
+}

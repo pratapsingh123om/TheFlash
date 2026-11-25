@@ -103,6 +103,20 @@ h3,
   font-size: 0.82rem;
 }
 
+.header-analysis-link {
+  order: 4;
+  color: #8fd1ca;
+  font-size: 0.76rem;
+  font-weight: 700;
+  text-decoration-color: rgba(143, 209, 202, 0.45);
+  text-underline-offset: 3px;
+}
+
+.header-analysis-link:hover,
+.header-analysis-link:focus-visible {
+  color: #ffffff;
+}
+
 .badge {
   min-height: 26px;
   padding: 3px 11px;

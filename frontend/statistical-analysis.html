@@ -1,0 +1,189 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Concise statistical analysis of the audited 2019–2023 India lightning dataset used by the India Lightning Outlook research prototype.">
+  <title>Statistical Analysis · India Lightning Outlook</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⚡</text></svg>">
+  <link rel="stylesheet" href="/styles.css">
+  <link rel="stylesheet" href="/reference-theme.css">
+  <link rel="stylesheet" href="/statistics.css">
+</head>
+<body class="statistics-page">
+  <header class="topbar stats-topbar">
+    <div class="header-main">
+      <a class="brand-kicker" href="/">India Lightning Outlook</a>
+      <h1>What the data showed before modelling</h1>
+      <p class="subtitle">A concise, audited view of lightning variability across India · 2019–2023</p>
+    </div>
+    <nav class="page-nav" aria-label="Primary navigation">
+      <a href="/">Forecast viewer</a>
+      <a href="/statistical-analysis.html" aria-current="page">Statistical analysis</a>
+    </nav>
+  </header>
+
+  <main class="stats-main">
+    <section class="stats-intro" aria-labelledby="stats-intro-title">
+      <div>
+        <p class="eyebrow">Exploratory analysis · native 0.25° grid</p>
+        <h2 id="stats-intro-title">Five findings that shaped the forecast design</h2>
+        <p>
+          Counts below come from the audited India-only Parquet partitions. They describe retained lightning strokes—not people affected, flashes, or forecast probabilities.
+        </p>
+      </div>
+      <div id="data-status" class="data-status" role="status" aria-live="polite">Loading audited summary…</div>
+    </section>
+
+    <section class="summary-grid" aria-label="Dataset summary">
+      <article class="summary-tile">
+        <span class="summary-label">Retained strokes</span>
+        <strong id="summary-strokes">—</strong>
+        <small>Audited India observations</small>
+      </article>
+      <article class="summary-tile">
+        <span class="summary-label">Scored 6-hour windows</span>
+        <strong id="summary-scored">—</strong>
+        <small>Eligible observation periods</small>
+      </article>
+      <article class="summary-tile summary-tile-warn">
+        <span class="summary-label">Masked windows</span>
+        <strong id="summary-masked">—</strong>
+        <small>Missing periods, never zero-filled</small>
+      </article>
+      <article class="summary-tile">
+        <span class="summary-label">Years covered</span>
+        <strong id="summary-years">—</strong>
+        <small>Chronological study period</small>
+      </article>
+    </section>
+
+    <section class="finding-card coverage-card" aria-labelledby="coverage-title">
+      <div class="finding-copy">
+        <span class="finding-number">01</span>
+        <p class="eyebrow">Data integrity</p>
+        <h2 id="coverage-title">Most periods were usable; gaps stayed visible</h2>
+        <p class="finding-takeaway" id="takeaway-coverage">—</p>
+        <p class="why"><strong>Why it mattered:</strong> Masking missing targets prevents corrupt or absent source days from teaching the model that “no record” means “no lightning.”</p>
+        <details>
+          <summary>Method and audit notes</summary>
+          <p id="coverage-method">Monthly Parquet partitions were reconciled against the conversion manifest and file fingerprints.</p>
+        </details>
+      </div>
+      <div class="finding-viz" aria-label="Scored and masked six-hour windows">
+        <div class="coverage-meter" role="img" id="coverage-meter" aria-label="Loading coverage">
+          <span id="coverage-scored-bar" class="coverage-scored"></span>
+          <span id="coverage-masked-bar" class="coverage-masked"></span>
+        </div>
+        <div class="coverage-legend">
+          <span><i class="legend-swatch scored"></i><strong id="coverage-scored-label">—</strong> scored</span>
+          <span><i class="legend-swatch masked"></i><strong id="coverage-masked-label">—</strong> masked</span>
+        </div>
+        <a class="data-link" href="/data/stats/statistical-summary.json" download>Download audited summary (JSON)</a>
+      </div>
+    </section>
+
+    <section class="finding-card" aria-labelledby="annual-title">
+      <div class="finding-copy">
+        <span class="finding-number">02</span>
+        <p class="eyebrow">Interannual variability</p>
+        <h2 id="annual-title">Annual volume changed substantially</h2>
+        <p class="finding-takeaway" id="takeaway-annual">—</p>
+        <p class="why"><strong>Why it mattered:</strong> Training on earlier years, selecting on 2022, and evaluating on 2023 better reflects real forecasting than a random row split.</p>
+        <details>
+          <summary>How to read this chart</summary>
+          <p>Each bar is the number of retained strokes in one calendar year. Different data coverage can contribute to apparent year-to-year variation.</p>
+        </details>
+      </div>
+      <div class="finding-viz">
+        <div id="annual-chart" class="bar-chart horizontal-bars" aria-label="Annual retained lightning strokes"></div>
+        <a class="data-link" href="/data/stats/annual.csv" download>Download annual counts (CSV)</a>
+      </div>
+    </section>
+
+    <section class="finding-card" aria-labelledby="monthly-title">
+      <div class="finding-copy">
+        <span class="finding-number">03</span>
+        <p class="eyebrow">Seasonal cycle</p>
+        <h2 id="monthly-title">Lightning clustered around the monsoon</h2>
+        <p class="finding-takeaway" id="takeaway-monthly">—</p>
+        <p class="why"><strong>Why it mattered:</strong> Month, season, and cyclic day-of-year features give the model the correct climatological context.</p>
+        <details>
+          <summary>Definition</summary>
+          <p>Monthly totals pool the five study years by IST date. They show the seasonal shape, not a typical single year.</p>
+        </details>
+      </div>
+      <div class="finding-viz">
+        <div id="monthly-chart" class="monthly-chart" aria-label="Retained lightning strokes by month"></div>
+        <a class="data-link" href="/data/stats/monthly.csv" download>Download monthly climatology (CSV)</a>
+      </div>
+    </section>
+
+    <section class="finding-card" aria-labelledby="cycle-title">
+      <div class="finding-copy">
+        <span class="finding-number">04</span>
+        <p class="eyebrow">Six-hour IST cycle</p>
+        <h2 id="cycle-title">Evening was the busiest period</h2>
+        <p class="finding-takeaway" id="takeaway-cycle">—</p>
+        <p class="why"><strong>Why it mattered:</strong> The target was built as four IST-aligned six-hour windows instead of a daily total, preserving the strong within-day signal.</p>
+        <details>
+          <summary>Period definition</summary>
+          <p>Night, morning, afternoon, and evening are fixed six-hour IST periods. The matrix separates each period by meteorological season.</p>
+        </details>
+      </div>
+      <div class="finding-viz">
+        <div id="season-time-matrix" class="season-time-matrix" aria-label="Season by six-hour period lightning totals"></div>
+        <a class="data-link" href="/data/stats/season-time.csv" download>Download season × period counts (CSV)</a>
+      </div>
+    </section>
+
+    <section class="finding-card" aria-labelledby="spatial-title">
+      <div class="finding-copy">
+        <span class="finding-number">05</span>
+        <p class="eyebrow">Spatial concentration</p>
+        <h2 id="spatial-title">Risk was locally concentrated</h2>
+        <p class="finding-takeaway" id="takeaway-spatial">—</p>
+        <p class="why"><strong>Why it mattered:</strong> Keeping the native 0.25° grid retained local structure that a national count or coarser aggregation would hide.</p>
+        <details>
+          <summary>Interpretation limit</summary>
+          <p>These are cell-level historical counts. They are not population-normalized risk and should not be interpreted as casualty exposure.</p>
+        </details>
+      </div>
+      <div class="finding-viz spatial-viz">
+        <div>
+          <h3>Leading grid cells</h3>
+          <div class="table-scroll">
+            <table>
+              <thead><tr><th>Rank</th><th>Cell centre</th><th>Strokes</th></tr></thead>
+              <tbody id="hotspot-table"></tbody>
+            </table>
+          </div>
+          <a class="data-link" href="/data/stats/hotspots.csv" download>Download top cells (CSV)</a>
+        </div>
+        <div>
+          <h3>Highest-volume days</h3>
+          <ol id="top-days" class="top-days"></ol>
+          <a class="data-link" href="/data/stats/top-days.csv" download>Download top days (CSV)</a>
+        </div>
+      </div>
+    </section>
+
+    <section class="methods-note" aria-labelledby="methods-title">
+      <div>
+        <p class="eyebrow">Reproducibility</p>
+        <h2 id="methods-title">Generated from the audited Parquet dataset</h2>
+      </div>
+      <p>
+        The showcase data is rebuilt by <code>scripts/build_stats.py</code> from all 60 monthly partitions. The build fails if partition totals, manifests, window accounting, or source fingerprints do not reconcile.
+      </p>
+    </section>
+  </main>
+
+  <footer class="stats-footer">
+    <p><strong>Research prototype.</strong> Descriptive statistics support model design; they are not operational lightning warnings.</p>
+    <a href="/">Return to forecast viewer</a>
+  </footer>
+
+  <script src="/statistics.js" defer></script>
+</body>
+</html>
